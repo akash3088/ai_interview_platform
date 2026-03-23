@@ -56,7 +56,7 @@ def interview():
         return "Please select a role from dashboard first."
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    cursor = conn.cursor(dictionary=True, buffered=True)
 
     # FIRST TIME START
     if request.method == "GET":
