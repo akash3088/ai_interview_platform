@@ -1,4 +1,5 @@
-from google import genai
+import os
+import google.genai as genai
 
 
 # Create Gemini client safely
