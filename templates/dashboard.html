@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard · NEXUS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=Unbounded:wght@300;400;700;900&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#03040a;
+  --pri:#00ffe0;
+  --sec:#0050ff;
+  --glow:rgba(0,255,224,0.4);
+  --txt:#f0f4ff;
+  --dim:#3a4560;
+  --surface:rgba(8,14,32,0.75);
+}
+html{font-size:16px}
+body{
+  background:var(--bg);
+  color:var(--txt);
+  font-family:'Unbounded',sans-serif;
+  min-height:100dvh;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:none;
+  position:relative;
+}
+
+/* CUSTOM CURSOR */
+#cursor{position:fixed;width:8px;height:8px;background:var(--pri);border-radius:50%;pointer-events:none;z-index:9999;box-shadow:0 0 14px var(--pri),0 0 28px var(--pri);transform:translate(-50%,-50%);transition:background 0.4s,box-shadow 0.4s}
+#cursor-ring{position:fixed;width:36px;height:36px;border:1px solid var(--pri);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:0.5;transition:width 0.3s,height 0.3s,border-color 0.4s,opacity 0.3s}
+
+/* CANVAS */
+#bgCanvas{position:fixed;inset:0;z-index:0}
+#ptCanvas{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+/* OVERLAYS */
+.scan{position:fixed;inset:0;z-index:2;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px)}
+.grid{position:fixed;inset:0;z-index:2;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);background-size:60px 60px;mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,black,transparent)}
+.vignette{position:fixed;inset:0;z-index:3;pointer-events:none;background:radial-gradient(ellipse 85% 85% at 50% 50%,transparent 35%,rgba(0,2,12,0.88) 100%)}
+.grain{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0.032;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px 200px}
+#flash{position:fixed;inset:0;z-index:5;pointer-events:none;opacity:0}
+#flash.pop{animation:flashAnim 0.8s forwards}
+@keyframes flashAnim{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+
+/* SHELL */
+.shell{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:220px 560px 220px;
+  gap:0 28px;
+  align-items:center;
+  width:100%;
+  max-width:1140px;
+  padding:0 20px
+}
+
+/* LEFT */
+.side-l{display:flex;flex-direction:column;gap:20px;opacity:0;transform:translateX(-40px);animation:slideL 1s 0.5s cubic-bezier(0.22,1,0.36,1) forwards}
+@keyframes slideL{to{opacity:1;transform:none}}
+
+.stat{position:relative;padding:17px 20px 15px;border:1px solid rgba(255,255,255,0.05);border-left:1.5px solid var(--pri);background:rgba(6,12,28,0.55);backdrop-filter:blur(10px);overflow:hidden;transition:border-color 0.7s}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--pri),transparent);opacity:0.4;transition:background 0.7s}
+.stat-lbl{font-family:'Space Mono',monospace;font-size:0.54rem;letter-spacing:3px;color:var(--dim);text-transform:uppercase;margin-bottom:5px}
+.stat-val{font-family:'Bebas Neue',sans-serif;font-size:2.3rem;line-height:1;letter-spacing:2px;color:var(--txt)}
+.stat-val em{color:var(--pri);font-style:normal;text-shadow:0 0 20px var(--glow);transition:color 0.7s,text-shadow 0.7s}
+.stat-track{margin-top:8px;height:1px;background:rgba(255,255,255,0.06)}
+.stat-fill{height:100%;background:var(--pri);box-shadow:0 0 8px var(--pri);width:0;transition:width 1.8s 1s cubic-bezier(0.22,1,0.36,1),background 0.7s,box-shadow 0.7s}
+
+.hex-badge{display:flex;align-items:center;gap:10px;padding:14px 18px;border:1px solid rgba(255,255,255,0.04);background:rgba(6,12,28,0.55);backdrop-filter:blur(10px)}
+.hex-icon{width:30px;height:30px;background:var(--pri);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);box-shadow:0 0 16px var(--glow);flex-shrink:0;transition:background 0.7s,box-shadow 0.7s}
+.hex-txt{font-family:'Space Mono',monospace;font-size:0.54rem;letter-spacing:2px;color:var(--dim);text-transform:uppercase;line-height:1.7}
+.hex-txt strong{color:var(--pri);font-size:0.7rem;display:block;transition:color 0.7s}
+
+/* CARD */
+.card{position:relative;background:rgba(5,9,22,0.72);backdrop-filter:blur(48px) saturate(200%);border:1px solid rgba(255,255,255,0.06);padding:42px 42px 34px;overflow:hidden;opacity:0;transform:translateY(30px) scale(0.97);animation:riseCard 1s 0.15s cubic-bezier(0.22,1,0.36,1) forwards;transition:box-shadow 0.8s}
+.card:hover{box-shadow:0 0 80px rgba(0,255,224,0.05),0 40px 100px rgba(0,0,0,0.7)}
+@keyframes riseCard{to{opacity:1;transform:none}}
+
+.card-topbar{position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--pri),var(--sec),transparent);box-shadow:0 0 24px var(--glow);transition:background 0.7s,box-shadow 0.7s}
+.cc{position:absolute;width:18px;height:18px;border-color:var(--pri);border-style:solid;transition:border-color 0.7s}
+.cc.tl{top:-1px;left:-1px;border-width:2px 0 0 2px}
+.cc.tr{top:-1px;right:-1px;border-width:2px 2px 0 0}
+.cc.bl{bottom:-1px;left:-1px;border-width:0 0 2px 2px}
+.cc.br{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+.card-shimmer{position:absolute;inset:0;pointer-events:none;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,0.012) 50%,transparent 65%);background-size:300% 100%;animation:shimSweep 6s ease-in-out infinite}
+@keyframes shimSweep{0%{background-position:150% 0}100%{background-position:-150% 0}}
+
+.sys-row{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.sys-dot{width:6px;height:6px;border-radius:50%;background:var(--pri);box-shadow:0 0 10px var(--pri);animation:blink 1.4s infinite;transition:background 0.7s,box-shadow 0.7s}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+.sys-txt{font-family:'Space Mono',monospace;font-size:0.56rem;letter-spacing:4px;color:var(--dim);text-transform:uppercase}
+
+.brand{font-family:'Bebas Neue',sans-serif;font-size:4.2rem;line-height:0.9;letter-spacing:8px;background:linear-gradient(135deg,#fff 0%,var(--pri) 45%,var(--sec) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px;transition:background 0.7s;animation:brandPulse 4s ease-in-out infinite alternate}
+@keyframes brandPulse{0%{filter:drop-shadow(0 0 6px rgba(0,255,224,0.3))}100%{filter:drop-shadow(0 0 22px rgba(0,255,224,0.65))}}
+.brand-sub{font-family:'Space Mono',monospace;font-size:0.58rem;letter-spacing:4px;color:var(--pri);text-transform:uppercase;margin-bottom:20px;opacity:0.8;transition:color 0.7s}
+
+.welcome-line{
+  font-family:'Space Mono',monospace;
+  font-size:0.7rem;
+  letter-spacing:2px;
+  color:var(--dim);
+  text-transform:uppercase;
+  margin-bottom:12px;
+}
+
+.role-display{min-height:40px;margin-bottom:18px;position:relative;overflow:hidden}
+.role-name{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;letter-spacing:5px;color:var(--pri);text-shadow:0 0 30px var(--glow);transition:color 0.7s,text-shadow 0.7s;display:block}
+.role-name.flip{animation:roleFlip 0.45s forwards}
+@keyframes roleFlip{0%{transform:translateY(0) scaleY(1);opacity:1}45%{transform:translateY(-110%) scaleY(0.4);opacity:0}46%{transform:translateY(110%) scaleY(0.4);opacity:0}100%{transform:translateY(0) scaleY(1);opacity:1}}
+
+.divline{height:1px;background:linear-gradient(90deg,var(--pri) 0%,rgba(255,255,255,0.04) 60%,transparent 100%);margin:18px 0;opacity:0.3;transition:background 0.7s}
+
+.info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:20px;
+}
+.info-box{
+  padding:14px 16px;
+  background:rgba(6,12,28,0.6);
+  border:1px solid rgba(255,255,255,0.05);
+}
+.info-label{
+  font-family:'Space Mono',monospace;
+  font-size:0.52rem;
+  letter-spacing:2px;
+  color:var(--dim);
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.info-value{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:1.3rem;
+  letter-spacing:2px;
+  color:var(--pri);
+}
+
+.sel-wrap{position:relative;margin-bottom:14px}
+.sel-lbl{font-family:'Space Mono',monospace;font-size:0.54rem;letter-spacing:3px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:8px}
+select{width:100%;padding:15px 46px 15px 18px;font-family:'Unbounded',sans-serif;font-size:0.72rem;font-weight:400;background:rgba(6,12,28,0.7);border:1px solid rgba(255,255,255,0.06);border-bottom:1px solid var(--pri);color:var(--txt);appearance:none;cursor:pointer;outline:none;transition:all 0.4s;letter-spacing:1px}
+select:focus{border-color:var(--pri);background:rgba(6,12,28,0.9);box-shadow:0 0 0 1px var(--pri),0 0 40px var(--glow)}
+select option{background:#0a1020;color:var(--txt)}
+.sel-arr{position:absolute;bottom:16px;right:18px;color:var(--pri);pointer-events:none;font-size:0.7rem;transition:color 0.7s}
+
+.pills{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+.pill{padding:7px 15px;font-family:'Space Mono',monospace;font-size:0.54rem;letter-spacing:2px;text-transform:uppercase;border:1px solid rgba(255,255,255,0.07);background:transparent;color:var(--dim);cursor:pointer;transition:all 0.3s}
+.pill:hover{color:var(--pri);border-color:var(--pri)}
+.pill.on{color:var(--bg);border-color:var(--pri);background:var(--pri);box-shadow:0 0 20px var(--glow);font-weight:700}
+
+.btn-cta{width:100%;padding:17px;font-family:'Bebas Neue',sans-serif;font-size:1.35rem;letter-spacing:6px;border:none;background:var(--pri);color:var(--bg);cursor:pointer;position:relative;overflow:hidden;transition:all 0.4s cubic-bezier(0.22,1,0.36,1);display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:11px}
+.btn-cta::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent);transition:left 0.6s}
+.btn-cta:hover::before{left:140%}
+.btn-cta:hover{transform:translateY(-4px);box-shadow:0 20px 60px var(--glow),0 0 0 1px rgba(255,255,255,0.1)}
+.btn-arr{transition:transform 0.3s}
+.btn-cta:hover .btn-arr{transform:translateX(8px)}
+
+.action-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:8px;
+}
+.btn-ghost{
+  width:100%;
+  padding:12px;
+  font-family:'Space Mono',monospace;
+  font-size:0.58rem;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  text-decoration:none;
+  border:1px solid rgba(255,255,255,0.06);
+  background:transparent;
+  color:var(--dim);
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  transition:all 0.3s;
+}
+.btn-logout-wide{
+  grid-column: 1 / 3;
+}
+.btn-ghost:hover{border-color:var(--pri);color:var(--pri);background:rgba(0,255,224,0.03)}
+
+/* RIGHT */
+.side-r{display:flex;flex-direction:column;gap:14px;opacity:0;transform:translateX(40px);animation:slideR 1s 0.7s cubic-bezier(0.22,1,0.36,1) forwards}
+@keyframes slideR{to{opacity:1;transform:none}}
+
+.rcard{padding:17px 18px;background:rgba(6,12,28,0.5);border:1px solid rgba(255,255,255,0.04);border-left:1.5px solid transparent;cursor:pointer;position:relative;overflow:hidden;transition:all 0.35s;backdrop-filter:blur(10px)}
+.rcard::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.02),transparent);opacity:0;transition:opacity 0.3s}
+.rcard:hover::after,.rcard.on::after{opacity:1}
+.rcard:hover,.rcard.on{border-left-color:var(--pri);background:rgba(6,12,28,0.8);transform:translateX(-4px);box-shadow:4px 0 0 var(--pri),0 0 30px rgba(0,0,0,0.5)}
+.rcard-badge{font-family:'Space Mono',monospace;font-size:0.5rem;letter-spacing:2px;text-transform:uppercase;padding:3px 8px;border:1px solid;float:right;transition:color 0.7s,border-color 0.7s}
+.rcard[data-r=be] .rcard-badge{color:#00ffe0;border-color:rgba(0,255,224,0.25)}
+.rcard[data-r=fe] .rcard-badge{color:#ff2d9b;border-color:rgba(255,45,155,0.25)}
+.rcard[data-r=hr] .rcard-badge{color:#7c3aed;border-color:rgba(124,58,237,0.25)}
+.rcard[data-r=sd] .rcard-badge{color:#ffb300;border-color:rgba(255,179,0,0.25)}
+.rcard[data-r=da] .rcard-badge{color:#22c55e;border-color:rgba(34,197,94,0.25)}
+.rcard-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;margin-bottom:4px;color:var(--txt)}
+.rcard-desc{font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--dim);line-height:1.75}
+.rcard-nodes{display:flex;gap:3px;margin-top:9px}
+.rnode{width:18px;height:2px;background:var(--dim);transition:background 0.5s,box-shadow 0.5s}
+.rcard.on .rnode,.rcard:hover .rnode{background:var(--pri);box-shadow:0 0 6px var(--pri)}
+.rnode:nth-child(2){width:12px}
+.rnode:nth-child(3){width:7px}
+
+/* TICKER */
+.ticker-wrap{position:fixed;bottom:0;left:0;right:0;z-index:20;background:rgba(3,4,10,0.94);border-top:1px solid rgba(255,255,255,0.04);padding:9px 0;overflow:hidden}
+.ticker-inner{display:flex;gap:56px;white-space:nowrap;animation:tickScroll 38s linear infinite}
+@keyframes tickScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-item{font-family:'Space Mono',monospace;font-size:0.56rem;letter-spacing:3px;color:var(--dim);text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.tick-item span{color:var(--pri);text-shadow:0 0 10px var(--glow);transition:color 0.7s,text-shadow 0.7s}
+
+@media(max-width:1100px){
+  .shell{grid-template-columns:1fr;max-width:620px}
+  .side-l,.side-r{display:none}
+}
+@media(max-width:640px){
+  .card{padding:28px 20px 24px}
+  .brand{font-size:3.2rem}
+  .info-grid,.action-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<canvas id="ptCanvas"></canvas>
+<div class="scan"></div>
+<div class="grain"></div>
+<div class="grid"></div>
+<div class="vignette"></div>
+<div id="flash"></div>
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<div class="shell">
+  <aside class="side-l">
+    <div class="stat">
+      <div class="stat-lbl">User Credits</div>
+      <div class="stat-val"><em>{{ user.credits }}</em></div>
+      <div class="stat-track"><div class="stat-fill" data-w="82"></div></div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-lbl">Current Level</div>
+      <div class="stat-val">
+        <em>{% if role_data %}{{ role_data.level }}{% else %}1{% endif %}</em>
+      </div>
+      <div class="stat-track"><div class="stat-fill" data-w="68"></div></div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-lbl">Total Score</div>
+      <div class="stat-val">
+        <em>{% if role_data %}{{ role_data.total_score }}{% else %}0{% endif %}</em>
+      </div>
+      <div class="stat-track"><div class="stat-fill" data-w="74"></div></div>
+    </div>
+
+    <div class="hex-badge">
+      <div class="hex-icon" id="hexIcon"></div>
+      <div class="hex-txt">
+        <strong id="hexRole">{% if role %}{{ role }}{% else %}UNASSIGNED{% endif %}</strong>
+        Path Status
+      </div>
+    </div>
+  </aside>
+
+  <main class="card">
+    <div class="cc tl"></div><div class="cc tr"></div>
+    <div class="cc bl"></div><div class="cc br"></div>
+    <div class="card-topbar"></div>
+    <div class="card-shimmer"></div>
+
+    <div class="sys-row">
+      <div class="sys-dot"></div>
+      <div class="sys-txt">NEXUS CORE · DASHBOARD LIVE · v4.1.0</div>
+    </div>
+
+    <div class="welcome-line">Welcome, {{ user.username }}</div>
+    <div class="brand">NEXUS</div>
+    <div class="brand-sub">Neural Execution Hub · Candidate Dashboard</div>
+
+    <div class="role-display">
+      <span class="role-name" id="roleName">
+        {% if role %}
+          {{ role }}
+        {% else %}
+          AWAITING NEURAL PATH...
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="divline"></div>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-label">Role Applied</div>
+        <div class="info-value">{{ role if role else 'N/A' }}</div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Credits</div>
+        <div class="info-value">{{ user.credits }}</div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Level</div>
+        <div class="info-value">
+          {% if role_data %}
+            {{ role_data.level }}
+          {% else %}
+            1
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-label">Total Score</div>
+        <div class="info-value">
+          {% if role_data %}
+            {{ role_data.total_score }}
+          {% else %}
+            0
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <form action="/set-role" method="POST">
+      <div class="sel-wrap">
+        <label class="sel-lbl" for="roleSelect">Select Neural Path</label>
+        <select id="roleSelect" name="role" onchange="activateRole(this.value)">
+          <option value="" disabled {% if not role %}selected{% endif %}>CHOOSE YOUR PATH...</option>
+          <option value="Backend Developer" {% if role == 'Backend Developer' %}selected{% endif %}>Backend Developer</option>
+          <option value="Frontend Developer" {% if role == 'Frontend Developer' %}selected{% endif %}>Frontend Developer</option>
+          <option value="HR Round" {% if role == 'HR Round' %}selected{% endif %}>HR Round</option>
+          <option value="System Design" {% if role == 'System Design' %}selected{% endif %}>System Design</option>
+          <option value="Data Analyst" {% if role == 'Data Analyst' %}selected{% endif %}>Data Analyst</option>
+        </select>
+        <div class="sel-arr">▼</div>
+      </div>
+
+      <div class="pills">
+        <button type="button" class="pill" data-p="Backend Developer" onclick="activateRole('Backend Developer')">Backend</button>
+        <button type="button" class="pill" data-p="Frontend Developer" onclick="activateRole('Frontend Developer')">Frontend</button>
+        <button type="button" class="pill" data-p="HR Round" onclick="activateRole('HR Round')">HR</button>
+        <button type="button" class="pill" data-p="System Design" onclick="activateRole('System Design')">System</button>
+        <button type="button" class="pill" data-p="Data Analyst" onclick="activateRole('Data Analyst')">Analyst</button>
+      </div>
+
+      <button type="submit" class="btn-cta">
+        SET ROLE <span class="btn-arr">→</span>
+      </button>
+    </form>
+
+    <div class="action-grid">
+      <a href="/interview" class="btn-ghost">Start Interview ↗</a>
+      <a href="/add-credits" class="btn-ghost">Add 5 Credits ↗</a>
+      <a href="/game_dashboard?role={{ role }}" class="btn-ghost">Enter Dungeon Arena ↗</a>
+      <a href="/logout" class="btn-ghost ">Log Out ↗</a>
+    </div>
+  </main>
+
+  <aside class="side-r">
+    <div class="rcard" data-r="be" onclick="activateRole('Backend Developer')">
+      <div class="rcard-badge">INFRA</div>
+      <div class="rcard-title">Backend Developer</div>
+      <div class="rcard-desc">APIs · Databases · Flask · Authentication</div>
+      <div class="rcard-nodes"><div class="rnode"></div><div class="rnode"></div><div class="rnode"></div></div>
+    </div>
+
+    <div class="rcard" data-r="fe" onclick="activateRole('Frontend Developer')">
+      <div class="rcard-badge">UI/UX</div>
+      <div class="rcard-title">Frontend Developer</div>
+      <div class="rcard-desc">Interfaces · Responsive Layout · Motion · Components</div>
+      <div class="rcard-nodes"><div class="rnode"></div><div class="rnode"></div><div class="rnode"></div></div>
+    </div>
+
+    <div class="rcard" data-r="hr" onclick="activateRole('HR Round')">
+      <div class="rcard-badge">PEOPLE</div>
+      <div class="rcard-title">HR Round</div>
+      <div class="rcard-desc">Communication · Confidence · Behaviour · Personality</div>
+      <div class="rcard-nodes"><div class="rnode"></div><div class="rnode"></div><div class="rnode"></div></div>
+    </div>
+
+    <div class="rcard" data-r="sd" onclick="activateRole('System Design')">
+      <div class="rcard-badge">ARCH</div>
+      <div class="rcard-title">System Design</div>
+      <div class="rcard-desc">Scalability · HLD/LLD · Fault Tolerance · Patterns</div>
+      <div class="rcard-nodes"><div class="rnode"></div><div class="rnode"></div><div class="rnode"></div></div>
+    </div>
+
+    <div class="rcard" data-r="da" onclick="activateRole('Data Analyst')">
+      <div class="rcard-badge">DATA</div>
+      <div class="rcard-title">Data Analyst</div>
+      <div class="rcard-desc">SQL · Dashboards · Reports · Insights</div>
+      <div class="rcard-nodes"><div class="rnode"></div><div class="rnode"></div><div class="rnode"></div></div>
+    </div>
+  </aside>
+</div>
+
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="ticker"></div>
+</div>
+
+<script>
+/* ══ THEMES ══════════════════════════════════════════ */
+const TH = {
+  default:{
+    pri:'#00ffe0',sec:'#0050ff',bg:[3,4,10],
+    c:[[0,255,224],[0,80,255],[0,180,180]],
+    glow:'rgba(0,255,224,0.4)',
+    flash:'rgba(0,255,224,0.25)',
+    label:'AWAITING NEURAL PATH...',status:'IDLE',hex:'UNASSIGNED',
+  },
+  'Backend Developer':{
+    pri:'#00ffe0',sec:'#00b4ff',bg:[2,12,10],
+    c:[[0,255,210],[0,180,255],[0,120,180]],
+    glow:'rgba(0,255,224,0.45)',
+    flash:'rgba(0,255,200,0.3)',
+    label:'BACKEND DEVELOPER',status:'ACTIVE',hex:'BACKEND',
+  },
+  'Frontend Developer':{
+    pri:'#ff2d9b',sec:'#bf00ff',bg:[14,2,16],
+    c:[[255,45,155],[190,0,255],[255,100,50]],
+    glow:'rgba(255,45,155,0.45)',
+    flash:'rgba(255,45,155,0.35)',
+    label:'FRONTEND DEVELOPER',status:'ACTIVE',hex:'FRONTEND',
+  },
+  'HR Round':{
+    pri:'#7c3aed',sec:'#a855f7',bg:[10,4,18],
+    c:[[124,58,237],[168,85,247],[196,181,253]],
+    glow:'rgba(124,58,237,0.45)',
+    flash:'rgba(124,58,237,0.35)',
+    label:'HR ROUND',status:'ACTIVE',hex:'HR',
+  },
+  'System Design':{
+    pri:'#ffb300',sec:'#ff4500',bg:[14,9,0],
+    c:[[255,179,0],[255,70,0],[255,220,50]],
+    glow:'rgba(255,179,0,0.45)',
+    flash:'rgba(255,179,0,0.35)',
+    label:'SYSTEM DESIGN',status:'ACTIVE',hex:'SYSTEM',
+  },
+  'Data Analyst':{
+    pri:'#22c55e',sec:'#06b6d4',bg:[3,12,8],
+    c:[[34,197,94],[6,182,212],[132,204,22]],
+    glow:'rgba(34,197,94,0.45)',
+    flash:'rgba(34,197,94,0.35)',
+    label:'DATA ANALYST',status:'ACTIVE',hex:'ANALYST',
+  },
+};
+
+/* ══ CANVAS SETUP ════════════════════════════════════ */
+const bgC=document.getElementById('bgCanvas'),bgX=bgC.getContext('2d');
+const ptC=document.getElementById('ptCanvas'),ptX=ptC.getContext('2d');
+let W,H;
+function resize(){
+  W=bgC.width=ptC.width=window.innerWidth;
+  H=bgC.height=ptC.height=window.innerHeight;
+}
+resize();
+window.addEventListener('resize',resize);
+
+/* ══ COLOR HELPERS ═══════════════════════════════════ */
+const lerp=(a,b,t)=>a+(b-a)*t;
+const lerpC=(a,b,t)=>a.map((v,i)=>lerp(v,b[i],t));
+const rgb=(c,a=1)=>`rgba(${c[0]|0},${c[1]|0},${c[2]|0},${a})`;
+const ease=(t)=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+
+/* ══ THEME LERP STATE ════════════════════════════════ */
+let cur   = {...TH.default,c:[...TH.default.c.map(c=>[...c])],bg:[...TH.default.bg]};
+let from  = {...cur,c:cur.c.map(c=>[...c]),bg:[...cur.bg]};
+let target= {...cur,c:cur.c.map(c=>[...c]),bg:[...cur.bg]};
+let lerpT = 1;
+const LSPD = 0.028;
+
+function setTarget(role){
+  const th=TH[role]||TH.default;
+  from={c:cur.c.map(c=>[...c]),bg:[...cur.bg]};
+  target={c:th.c.map(c=>[...c]),bg:[...th.bg]};
+  lerpT=0;
+}
+function tickLerp(){
+  if(lerpT>=1)return;
+  lerpT=Math.min(1,lerpT+LSPD);
+  const t=ease(lerpT);
+  cur.c=from.c.map((fc,i)=>lerpC(fc,target.c[i],t));
+  cur.bg=lerpC(from.bg,target.bg,t);
+}
+
+/* ══ BACKGROUND DRAW ═════════════════════════════════ */
+const ORBS=[
+  {xf:0.18,yf:0.28,spd:0.00017,sz:0.7,ci:0},
+  {xf:0.82,yf:0.72,spd:0.00013,sz:0.6,ci:1},
+  {xf:0.5, yf:0.48,spd:0.00009,sz:0.5,ci:2},
+  {xf:0.25,yf:0.78,spd:0.00015,sz:0.4,ci:1},
+  {xf:0.75,yf:0.22,spd:0.00011,sz:0.45,ci:0},
+];
+
+function drawBg(ts){
+  bgX.clearRect(0,0,W,H);
+  bgX.fillStyle=`rgb(${cur.bg[0]|0},${cur.bg[1]|0},${cur.bg[2]|0})`;
+  bgX.fillRect(0,0,W,H);
+
+  ORBS.forEach((orb,i)=>{
+    const ox=(orb.xf+0.32*Math.sin(ts*orb.spd+i*1.4))*W;
+    const oy=(orb.yf+0.28*Math.cos(ts*orb.spd*0.75+i*2.1))*H;
+    const r=Math.min(W,H)*orb.sz;
+    const col=cur.c[orb.ci];
+    const g=bgX.createRadialGradient(ox,oy,0,ox,oy,r);
+    g.addColorStop(0,  rgb(col,0.16));
+    g.addColorStop(0.4,rgb(col,0.07));
+    g.addColorStop(1,  rgb(col,0));
+    bgX.fillStyle=g;
+    bgX.beginPath();bgX.arc(ox,oy,r,0,Math.PI*2);bgX.fill();
+  });
+
+  const hg=bgX.createLinearGradient(0,H*0.5,0,H);
+  hg.addColorStop(0,rgb(cur.c[0],0));
+  hg.addColorStop(0.55,rgb(cur.c[0],0.05));
+  hg.addColorStop(1,rgb(cur.c[0],0));
+  bgX.fillStyle=hg;
+  bgX.fillRect(0,H*0.5,W,H*0.5);
+
+  const tg=bgX.createLinearGradient(0,0,W,0);
+  tg.addColorStop(0,rgb(cur.c[0],0));
+  tg.addColorStop(0.5,rgb(cur.c[0],0.06));
+  tg.addColorStop(1,rgb(cur.c[0],0));
+  bgX.fillStyle=tg;
+  bgX.fillRect(0,0,W,2);
+}
+
+/* ══ PARTICLES ═══════════════════════════════════════ */
+const PCOUNT=90;
+const parts=Array.from({length:PCOUNT},()=>spawnP(true));
+
+function spawnP(rand=false){
+  return{
+    x:Math.random()*window.innerWidth,
+    y:rand?Math.random()*window.innerHeight:window.innerHeight+8,
+    vx:(Math.random()-0.5)*0.5,
+    vy:-(Math.random()*1.4+0.25),
+    sz:Math.random()<0.25?2.5:Math.random()<0.6?1.5:1,
+    life:Math.random(),
+    maxL:Math.random()*0.55+0.45,
+    tw:Math.random()*Math.PI*2,
+    ci:Math.floor(Math.random()*3),
+  };
+}
+
+const bursts=[];
+function addBurst(x,y,col,n=50){
+  for(let i=0;i<n;i++){
+    const a=(Math.PI*2*i)/n+Math.random()*0.5;
+    const s=Math.random()*8+1;
+    bursts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,sz:Math.random()*3+1,ci:i%3});
+  }
+}
+
+function drawParticles(){
+  ptX.clearRect(0,0,ptC.width,ptC.height);
+  parts.forEach((p,i)=>{
+    p.x+=p.vx; p.y+=p.vy; p.life+=0.0038; p.tw+=0.048;
+    const prog=p.life/p.maxL;
+    let op=prog<0.2?prog/0.2:prog>0.75?(1-prog)/0.25:1;
+    op*=0.65+0.35*Math.sin(p.tw);
+    if(p.life>=p.maxL||p.y<-20){parts[i]=spawnP(false);return;}
+    const col=cur.c[p.ci];
+    ptX.beginPath();
+    ptX.arc(p.x,p.y,p.sz,0,Math.PI*2);
+    ptX.fillStyle=rgb(col,op*0.75);
+    ptX.shadowBlur=p.sz*7;ptX.shadowColor=rgb(col,0.5);
+    ptX.fill();ptX.shadowBlur=0;
+  });
+
+  for(let i=bursts.length-1;i>=0;i--){
+    const b=bursts[i];
+    b.x+=b.vx;b.y+=b.vy;b.vy+=0.2;b.life-=0.03;
+    if(b.life<=0){bursts.splice(i,1);continue;}
+    const col=cur.c[b.ci];
+    ptX.beginPath();
+    ptX.arc(b.x,b.y,b.sz*b.life,0,Math.PI*2);
+    ptX.fillStyle=rgb(col,b.life*0.9);
+    ptX.shadowBlur=10;ptX.shadowColor=rgb(col,b.life);
+    ptX.fill();ptX.shadowBlur=0;
+  }
+}
+
+/* ══ MAIN LOOP ═══════════════════════════════════════ */
+function loop(ts){
+  tickLerp();
+  drawBg(ts);
+  drawParticles();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ══ ACTIVATE ROLE ═══════════════════════════════════ */
+function setCSSVar(n,v){document.documentElement.style.setProperty(n,v)}
+
+function activateRole(role){
+  if(!role)return;
+  const th=TH[role]||TH.default;
+
+  setTarget(role);
+  setCSSVar('--pri',th.pri);
+  setCSSVar('--sec',th.sec);
+  setCSSVar('--glow',th.glow);
+
+  const fl=document.getElementById('flash');
+  fl.style.background=`radial-gradient(ellipse 90% 90% at 50% 50%,${th.flash} 0%,transparent 70%)`;
+  fl.classList.remove('pop'); void fl.offsetWidth; fl.classList.add('pop');
+
+  addBurst(W/2,H/2,th.pri,55);
+
+  const rn=document.getElementById('roleName');
+  rn.classList.remove('flip'); void rn.offsetWidth; rn.classList.add('flip');
+  setTimeout(()=>{
+    rn.textContent=th.label;
+    rn.classList.remove('flip');
+  },220);
+
+  document.getElementById('hexRole').textContent=th.hex;
+
+  const sel=document.getElementById('roleSelect');
+  if(sel)sel.value=role;
+
+  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('on',p.dataset.p===role));
+
+  const rm={
+    'Backend Developer':'be',
+    'Frontend Developer':'fe',
+    'HR Round':'hr',
+    'System Design':'sd',
+    'Data Analyst':'da'
+  };
+  document.querySelectorAll('.rcard').forEach(c=>c.classList.toggle('on',c.dataset.r===rm[role]));
+}
+
+/* ══ CURSOR ══════════════════════════════════════════ */
+const cur2=document.getElementById('cursor');
+const curR=document.getElementById('cursor-ring');
+let mx=-100,my=-100,rx=-100,ry=-100;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function curLoop(){
+  cur2.style.left=mx+'px';cur2.style.top=my+'px';
+  rx+=(mx-rx)*0.11;ry+=(my-ry)*0.11;
+  curR.style.left=rx+'px';curR.style.top=ry+'px';
+  requestAnimationFrame(curLoop);
+})();
+
+/* ══ STAT BARS ═══════════════════════════════════════ */
+setTimeout(()=>{
+  document.querySelectorAll('.stat-fill').forEach(el=>{
+    el.style.width=el.dataset.w+'%';
+  });
+},1100);
+
+/* ══ TICKER ══════════════════════════════════════════ */
+const TICKS=[
+  ['SYSTEM','OPERATIONAL'],
+  ['USER','{{ user.username }}'],
+  ['CREDITS','{{ user.credits }}'],
+  ['ROLE','{% if role %}{{ role }}{% else %}UNASSIGNED{% endif %}'],
+  ['LEVEL','{% if role_data %}{{ role_data.level }}{% else %}1{% endif %}'],
+  ['SCORE','{% if role_data %}{{ role_data.total_score }}{% else %}0{% endif %}'],
+  ['MODE','DASHBOARD LIVE'],
+  ['QUEUE','READY']
+];
+const tk=document.getElementById('ticker');
+tk.innerHTML=[...TICKS,...TICKS].map(([k,v]) =>
+  `<div class="tick-item">${k}&nbsp;<span>${v}</span></div><div class="tick-item" style="color:#1a2540;font-size:0.4rem">◆</div>`
+).join('');
+
+/* ══ AUTO SET CURRENT ROLE THEME ═════════════════════ */
+window.addEventListener('load', () => {
+  const currentRole = `{% if role %}{{ role }}{% endif %}`;
+  if (currentRole) {
+    activateRole(currentRole);
+  }
+});
+</script>
+
+</body>
+</html>

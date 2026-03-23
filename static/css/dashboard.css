@@ -1,0 +1,13 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #b929295d;
+    color: white;
+    padding: 30px;
+}
+
+.card {
+    background: #eb9007c1;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+}

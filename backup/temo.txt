@@ -1,0 +1,71 @@
+FALLBACK_QUESTIONS = {
+    "Backend Developer": [
+        "Explain OOP principles.",
+        "What is REST API?",
+        "What is the difference between SQL and NoSQL?",
+        "Explain dependency injection."
+    ],
+
+    "Frontend Developer": [
+        "What is the difference between HTML, CSS and JavaScript?",
+        "What is the DOM?",
+        "Explain responsive design.",
+        "What is the difference between var, let and const?"
+    ],
+
+    "Data Analyst": [
+        "What is the difference between supervised and unsupervised learning?",
+        "What is data cleaning?",
+        "Explain correlation vs causation.",
+        "What is normalization in databases?"
+    ],
+
+    "HR Round": [
+        "Tell me about your strengths.",
+        "Describe a challenge you faced in a project.",
+        "Why should we hire you?",
+        "Where do you see yourself in 5 years?"
+    ]
+}
+
+
+# GET NEXT QUESTION FROM GEMINI
+next_question = None
+
+for line in ai_response.split("\n"):
+    line = line.strip()
+
+    if "next question" in line.lower():
+        parts = line.split(":", 1)
+
+        if len(parts) > 1 and parts[1].strip():
+            next_question = parts[1].strip()
+        break
+
+
+# 🔥 FALLBACK if Gemini failed or delayed
+if not next_question:
+
+    role_questions = FALLBACK_QUESTIONS.get(role, [])
+
+    used_questions = session.get("used_fallback_questions", [])
+
+    remaining_questions = [q for q in role_questions if q not in used_questions]
+
+    if remaining_questions:
+        next_question = remaining_questions[0]
+
+        used_questions.append(next_question)
+        session["used_fallback_questions"] = used_questions
+
+    else:
+        next_question = "Describe a technical challenge you solved."
+
+
+return render_template("interview.html", question=next_question)
+
+
+
+session["question_count"] = 1
+session["total_score"] = 0
+session["used_fallback_questions"] = []

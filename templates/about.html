@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>About Us | AI Interview Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#060400;
+  --pri:#f5c842;
+  --pri2:#e07b00;
+  --gold:#ffd166;
+  --amber:#ff9500;
+  --dark:#c87d00;
+  --cream:#ffe680;
+  --txt:#fff8e7;
+  --dim:#2a1800;
+  --muted:rgba(255,220,140,0.45);
+  --glow:rgba(245,200,66,0.55);
+  --border:rgba(245,200,66,0.15);
+  --card:rgba(20,12,0,0.80);
+}
+html{font-size:16px}
+body{
+  min-height:100vh;background:var(--bg);color:var(--txt);
+  font-family:'Rajdhani',sans-serif;
+  overflow-x:hidden;position:relative;cursor:none;
+  display:flex;flex-direction:column;align-items:center;
+}
+
+/* ══ CURSOR ══════════════════════════════════════════ */
+#cur{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--pri);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 14px var(--pri),0 0 28px var(--glow)}
+#cur-ring{position:fixed;width:36px;height:36px;border:1px solid var(--pri);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:0.4;transition:width 0.25s,height 0.25s,opacity 0.25s}
+.trail{position:fixed;border-radius:50%;pointer-events:none;z-index:9990;transform:translate(-50%,-50%)}
+
+/* ══ CANVAS ══════════════════════════════════════════ */
+#bgCanvas{position:fixed;inset:0;z-index:0}
+
+/* ══ OVERLAYS ════════════════════════════════════════ */
+.scan{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 4px)}
+.grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0.065;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0.4 0 0 0.1  0.8 0.3 0 0 0.05  0 0.1 0 0 0  0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:220px;mix-blend-mode:overlay;animation:grainShift 0.12s steps(1) infinite}
+@keyframes grainShift{0%{background-position:0 0}25%{background-position:20px -15px}50%{background-position:-10px 25px}75%{background-position:15px 10px}}
+.gold-foil{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(108deg,transparent 0px,rgba(255,215,60,0.022) 1px,transparent 2px,transparent 9px),repeating-linear-gradient(18deg,transparent 0px,rgba(255,185,30,0.015) 1px,transparent 2px,transparent 14px);mix-blend-mode:screen}
+.gold-sweep{position:fixed;inset:0;z-index:1;pointer-events:none;background:linear-gradient(110deg,transparent 0%,transparent 38%,rgba(255,210,80,0.032) 48%,rgba(255,230,120,0.055) 50%,rgba(255,210,80,0.032) 52%,transparent 62%,transparent 100%);background-size:200% 100%;animation:goldSweep 9s ease-in-out infinite;mix-blend-mode:screen}
+@keyframes goldSweep{0%{background-position:150% 0;opacity:0}10%{opacity:1}90%{opacity:1}100%{background-position:-50% 0;opacity:0}}
+.hatch{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(45deg,transparent,transparent 28px,rgba(255,180,30,0.012) 28px,rgba(255,180,30,0.012) 29px),repeating-linear-gradient(-45deg,transparent,transparent 42px,rgba(255,200,50,0.007) 42px,rgba(255,200,50,0.007) 43px)}
+.vignette{position:fixed;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 25%,rgba(4,2,0,0.94) 100%)}
+.grid-ov{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(rgba(245,200,66,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(245,200,66,0.025) 1px,transparent 1px);background-size:55px 55px;mask-image:radial-gradient(ellipse 75% 75% at 50% 50%,black,transparent)}
+
+/* ══ PAGE WRAPPER ════════════════════════════════════ */
+.page{position:relative;z-index:3;width:100%;padding:40px 24px 100px;display:flex;flex-direction:column;align-items:center}
+
+/* ══ TOPBAR ══════════════════════════════════════════ */
+.topbar{width:100%;max-width:1100px;display:flex;justify-content:space-between;align-items:center;margin-bottom:50px;opacity:0;animation:fadeDown 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) forwards}
+@keyframes fadeDown{to{opacity:1;transform:translateY(0)}}
+@keyframes riseUp{to{opacity:1;transform:translateY(0)}}
+
+.brand{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:8px;background:linear-gradient(90deg,#ffe680,#f5c842,#c87d00,#f5c842,#ffe680);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 14px rgba(245,200,66,0.5));animation:metalShimmer 5s ease-in-out infinite}
+@keyframes metalShimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.back-btn{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:4px;text-transform:uppercase;text-decoration:none;color:var(--muted);border:1px solid var(--border);padding:10px 20px;background:rgba(245,200,66,0.04);transition:all 0.3s;display:flex;align-items:center;gap:8px}
+.back-btn:hover{border-color:var(--pri);color:var(--pri);background:rgba(245,200,66,0.08);box-shadow:0 0 18px rgba(245,200,66,0.2)}
+
+/* ══ HEADER ══════════════════════════════════════════ */
+.page-header{text-align:center;margin-bottom:60px;opacity:0;transform:translateY(20px);animation:riseUp 0.9s 0.4s cubic-bezier(0.22,1,0.36,1) forwards}
+.header-pre{font-family:'Share Tech Mono',monospace;font-size:0.56rem;letter-spacing:7px;color:rgba(245,200,66,0.38);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:12px}
+.header-pre::before,.header-pre::after{content:'';width:40px;height:1px;background:linear-gradient(90deg,transparent,var(--pri));opacity:0.35}
+.header-pre::after{transform:scaleX(-1)}
+.header-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(58px,10vw,112px);letter-spacing:20px;line-height:0.88;background:linear-gradient(180deg,#fffbe8 0%,#ffe680 15%,#f5c842 32%,#c87d00 50%,#f5c842 68%,#ffe680 84%,#fff8e0 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 40px rgba(245,200,66,0.4)) drop-shadow(0 3px 10px rgba(160,80,0,0.5));animation:metalGlow 5s ease-in-out infinite alternate;cursor:default}
+@keyframes metalGlow{0%{filter:drop-shadow(0 0 28px rgba(245,200,66,0.35)) drop-shadow(0 2px 8px rgba(160,80,0,0.4))}100%{filter:drop-shadow(0 0 65px rgba(255,220,80,0.6)) drop-shadow(0 0 25px rgba(255,160,0,0.35))}}
+.header-sub{font-family:'Rajdhani',sans-serif;font-size:1rem;color:var(--muted);max-width:550px;margin:14px auto 0;line-height:1.8}
+
+/* ══ ORBITAL ARENA ═══════════════════════════════════ */
+.arena-wrap{
+  position:relative;
+  width:min(680px,92vw);
+  height:min(680px,92vw);
+  margin:0 auto;
+  opacity:0;transform:scale(0.94);
+  animation:arenaIn 1s 0.8s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+@keyframes arenaIn{to{opacity:1;transform:scale(1)}}
+
+/* ── CENTER VIDEO CIRCLE ── */
+.video-circle{
+  position:absolute;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:52%;height:52%;
+  border-radius:50%;
+  overflow:hidden;
+  z-index:5;
+  cursor:pointer;
+  border:2px solid rgba(245,200,66,0.4);
+  box-shadow:
+    0 0 0 4px rgba(245,200,66,0.08),
+    0 0 40px rgba(245,200,66,0.25),
+    0 0 80px rgba(200,100,0,0.15),
+    inset 0 0 30px rgba(0,0,0,0.5);
+  transition:all 0.45s cubic-bezier(0.22,1,0.36,1);
+}
+.video-circle:hover{
+  box-shadow:
+    0 0 0 6px rgba(245,200,66,0.15),
+    0 0 60px rgba(245,200,66,0.45),
+    0 0 100px rgba(200,100,0,0.25),
+    inset 0 0 30px rgba(0,0,0,0.5);
+  border-color:rgba(245,200,66,0.7);
+  transform:translate(-50%,-50%) scale(1.04);
+}
+.video-circle video{width:100%;height:100%;object-fit:cover;display:block;opacity:0.8}
+.video-play-overlay{
+  position:absolute;inset:0;
+  background:rgba(6,3,0,0.45);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  transition:background 0.4s;
+}
+.video-circle:hover .video-play-overlay{background:rgba(6,3,0,0.25)}
+.play-ring{
+  width:56px;height:56px;border-radius:50%;
+  border:1.5px solid rgba(255,255,255,0.75);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px var(--glow);
+  transition:all 0.35s;
+}
+.video-circle:hover .play-ring{transform:scale(1.15);box-shadow:0 0 35px var(--pri),0 0 0 8px rgba(245,200,66,0.1)}
+.play-tri{width:0;height:0;border-left:18px solid #fff;border-top:11px solid transparent;border-bottom:11px solid transparent;margin-left:4px}
+.video-label-txt{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:4px;color:rgba(255,240,180,0.6);text-transform:uppercase}
+
+/* ── OUTER RING (decorative) ── */
+.ring-outer{
+  position:absolute;inset:0;border-radius:50%;
+  border:1px solid rgba(245,200,66,0.1);
+  animation:ringRotate 40s linear infinite;
+}
+.ring-mid{
+  position:absolute;
+  top:6%;left:6%;right:6%;bottom:6%;
+  border-radius:50%;
+  border:1px dashed rgba(245,200,66,0.08);
+  animation:ringRotate 25s linear infinite reverse;
+}
+@keyframes ringRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* ── SVG ARC CANVAS ── */
+#arcSvg{
+  position:absolute;inset:0;
+  width:100%;height:100%;
+  overflow:visible;
+}
+
+/* ── SEGMENT LABELS (positioned by JS) ── */
+.seg-label{
+  position:absolute;
+  transform:translate(-50%,-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  cursor:pointer;z-index:10;
+  transition:all 0.3s;
+  pointer-events:auto;
+}
+.seg-photo{
+  width:60px;height:60px;border-radius:50%;
+  border:2px solid rgba(245,200,66,0.4);
+  object-fit:cover;
+  box-shadow:0 0 14px rgba(245,200,66,0.25);
+  transition:all 0.35s cubic-bezier(0.22,1,0.36,1);
+  background:rgba(20,12,0,0.8);
+  overflow:hidden;
+}
+.seg-label:hover .seg-photo,.seg-label.active .seg-photo{
+  border-color:rgba(245,200,66,0.9);
+  box-shadow:0 0 28px rgba(245,200,66,0.55),0 0 0 4px rgba(245,200,66,0.12);
+  transform:scale(1.12);
+}
+.seg-name{
+  font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:3px;
+  color:rgba(245,200,66,0.6);text-transform:uppercase;white-space:nowrap;
+  transition:color 0.3s;
+}
+.seg-label:hover .seg-name,.seg-label.active .seg-name{color:var(--pri);text-shadow:0 0 10px var(--glow)}
+.seg-num{
+  font-family:'Bebas Neue',sans-serif;font-size:0.85rem;letter-spacing:2px;
+  color:rgba(245,200,66,0.35);
+}
+
+/* ── DETAIL PANEL (flies out from center) ── */
+.detail-panel{
+  position:absolute;
+  width:220px;
+  background:rgba(16,9,0,0.92);
+  backdrop-filter:blur(24px);
+  border:1px solid rgba(245,200,66,0.18);
+  padding:22px 18px;
+  z-index:20;
+  opacity:0;pointer-events:none;
+  transform:scale(0.85);
+  transition:all 0.45s cubic-bezier(0.22,1,0.36,1);
+  transform-origin:center center;
+}
+.detail-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--pri),var(--gold),transparent);opacity:0.6}
+.detail-panel.open{opacity:1;pointer-events:auto;transform:scale(1)}
+
+/* corner accents on panel */
+.detail-panel .dcc{position:absolute;width:12px;height:12px;border-color:rgba(245,200,66,0.4);border-style:solid}
+.detail-panel .dcc.tl{top:-1px;left:-1px;border-width:1.5px 0 0 1.5px}
+.detail-panel .dcc.tr{top:-1px;right:-1px;border-width:1.5px 1.5px 0 0}
+.detail-panel .dcc.bl{bottom:-1px;left:-1px;border-width:0 0 1.5px 1.5px}
+.detail-panel .dcc.br{bottom:-1px;right:-1px;border-width:0 1.5px 1.5px 0}
+
+.dp-num{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:4px;color:rgba(245,200,66,0.4);margin-bottom:6px}
+.dp-name{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:4px;background:linear-gradient(90deg,#ffe680,#f5c842,#c87d00,#f5c842,#ffe680);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;animation:metalShimmer 4s ease-in-out infinite}
+.dp-row{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:1px;color:rgba(255,220,140,0.5);padding:7px 0;border-bottom:1px solid rgba(245,200,66,0.06);line-height:1.5}
+.dp-row b{color:rgba(255,220,140,0.85);font-weight:400;text-align:right;max-width:55%}
+.dp-skills{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.dp-skill{font-family:'Share Tech Mono',monospace;font-size:0.46rem;letter-spacing:1px;padding:4px 8px;border:1px solid rgba(245,200,66,0.2);color:rgba(245,200,66,0.6);background:rgba(245,200,66,0.04)}
+.dp-close{position:absolute;top:8px;right:8px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(245,200,66,0.4);cursor:pointer;transition:color 0.2s;font-family:sans-serif}
+.dp-close:hover{color:var(--pri)}
+.dp-img{width:100%;aspect-ratio:16/9;object-fit:cover;margin-bottom:14px;border:1px solid rgba(245,200,66,0.12);display:block;filter:brightness(0.8) saturate(0.9)}
+
+/* ══ VIDEO MODAL ═════════════════════════════════════ */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;opacity:0;pointer-events:none;transition:opacity 0.4s;backdrop-filter:blur(8px)}
+.modal-backdrop.active{opacity:1;pointer-events:auto}
+.modal-inner{width:min(1000px,95vw);background:rgba(16,10,0,0.97);border:1px solid rgba(245,200,66,0.18);padding:16px;position:relative;transform:scale(0.94) translateY(20px);transition:transform 0.4s cubic-bezier(0.22,1,0.36,1);box-shadow:0 0 60px rgba(245,200,66,0.12),0 40px 80px rgba(0,0,0,0.7)}
+.modal-inner::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,transparent,var(--pri),var(--gold),transparent);opacity:0.6}
+.modal-backdrop.active .modal-inner{transform:scale(1) translateY(0)}
+.modal-inner video{width:100%;max-height:78vh;display:block;background:#000;border:1px solid rgba(245,200,66,0.07)}
+.modal-close{position:absolute;top:-16px;right:-16px;width:40px;height:40px;border-radius:50%;border:1px solid rgba(245,200,66,0.28);background:rgba(16,10,0,0.95);color:var(--pri);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;z-index:2}
+.modal-close:hover{border-color:var(--pri);background:rgba(245,200,66,0.1);box-shadow:0 0 16px var(--glow)}
+
+/* ══ TICKER ══════════════════════════════════════════ */
+.ticker-wrap{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(4,2,0,0.95);border-top:1px solid rgba(245,200,66,0.07);padding:8px 0;overflow:hidden}
+.ticker-inner{display:flex;gap:52px;white-space:nowrap;animation:tickRoll 42s linear infinite}
+@keyframes tickRoll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-i{font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:3px;color:#1a0e00;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.tick-i span{color:var(--pri);text-shadow:0 0 10px var(--glow)}
+
+@media(max-width:600px){.arena-wrap{width:min(360px,94vw);height:min(360px,94vw)}.header-title{letter-spacing:8px}.seg-photo{width:44px;height:44px}.detail-panel{width:180px;padding:16px 14px}.dp-name{font-size:1.2rem}}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="grid-ov"></div>
+<div class="scan"></div>
+<div class="grain"></div>
+<div class="gold-foil"></div>
+<div class="gold-sweep"></div>
+<div class="hatch"></div>
+<div class="vignette"></div>
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<div class="page">
+
+  <!-- TOPBAR -->
+  <nav class="topbar">
+    <div class="brand">AI INTERVIEW PLATFORM</div>
+    <a href="/dashboard" class="back-btn">← BACK</a>
+  </nav>
+
+  <!-- HEADER -->
+  <header class="page-header">
+    <div class="header-pre">// NEURAL TEAM · MEET THE ARCHITECTS</div>
+    <h1 class="header-title">ABOUT US</h1>
+    <p class="header-sub">Click any team member on the ring to reveal their profile. Click the center to watch the project demo.</p>
+  </header>
+
+  <!-- ORBITAL ARENA -->
+  <div class="arena-wrap" id="arenaWrap">
+
+    <!-- Decorative rings -->
+    <div class="ring-outer"></div>
+    <div class="ring-mid"></div>
+
+    <!-- SVG for arc segments -->
+    <svg id="arcSvg"></svg>
+
+    <!-- CENTER VIDEO -->
+    <div class="video-circle" id="openVideo">
+      <video muted loop autoplay playsinline>
+        <source src="{{ url_for('static', filename='videos/video.mp4') }}" type="video/mp4">
+      </video>
+      <div class="video-play-overlay">
+        <div class="play-ring"><div class="play-tri"></div></div>
+        <div class="video-label-txt">PROJECT DEMO</div>
+      </div>
+    </div>
+
+<!-- SEGMENT LABELS -->
+<div class="seg-label" id="seg0" data-member="0">
+  <img class="seg-photo" src="{{ url_for('static', filename='images/member1.jpeg') }}" alt="Akash"/>
+  <div class="seg-num">01</div>
+  <div class="seg-name">Akash</div>
+</div>
+
+<div class="seg-label" id="seg1" data-member="1">
+  <img class="seg-photo" src="{{ url_for('static', filename='images/member2.jpg') }}" alt="Member 2"/>
+  <div class="seg-num">02</div>
+  <div class="seg-name">Member 2</div>
+</div>
+
+<div class="seg-label" id="seg2" data-member="2">
+  <img class="seg-photo" src="{{ url_for('static', filename='images/member3.jpg') }}" alt="Member 3"/>
+  <div class="seg-num">03</div>
+  <div class="seg-name">Member 3</div>
+</div>
+
+<div class="seg-label" id="seg3" data-member="3">
+  <img class="seg-photo" src="{{ url_for('static', filename='images/member4.jpg') }}" alt="Member 4"/>
+  <div class="seg-num">04</div>
+  <div class="seg-name">Member 4</div>
+</div>
+
+    <!-- DETAIL PANELS (positioned by JS) -->
+    <div class="detail-panel" id="dp0">
+      <div class="dcc tl"></div><div class="dcc tr"></div><div class="dcc bl"></div><div class="dcc br"></div>
+      <span class="dp-close" onclick="closePanel(0)">×</span>
+      <img class="dp-img" src="{{ url_for('static', filename='images/member1.jpeg') }}" alt="Akash"/>
+      <div class="dp-num">// MEMBER 01</div>
+      <div class="dp-name">Akash Patil</div>
+      <div class="dp-row"><span>College</span><b>Your College</b></div>
+      <div class="dp-row"><span>Degree</span><b>B.E. CSE</b></div>
+      <div class="dp-row"><span>Role</span><b>Full Stack Dev</b></div>
+      <div class="dp-skills">
+        <span class="dp-skill">Python</span><span class="dp-skill">Flask</span>
+        <span class="dp-skill">SQL</span><span class="dp-skill">Frontend</span>
+      </div>
+    </div>
+    <div class="detail-panel" id="dp1">
+      <div class="dcc tl"></div><div class="dcc tr"></div><div class="dcc bl"></div><div class="dcc br"></div>
+      <span class="dp-close" onclick="closePanel(1)">×</span>
+      <img class="dp-img" src="{{ url_for('static', filename='images/member2.jpg') }}" alt="Member 2"/>
+      <div class="dp-num">// MEMBER 02</div>
+      <div class="dp-name">Team Member 2</div>
+      <div class="dp-row"><span>College</span><b>Your College</b></div>
+      <div class="dp-row"><span>Degree</span><b>B.E. CSE</b></div>
+      <div class="dp-row"><span>Role</span><b>UI Designer</b></div>
+      <div class="dp-skills">
+        <span class="dp-skill">HTML</span><span class="dp-skill">CSS</span>
+        <span class="dp-skill">JS</span><span class="dp-skill">Figma</span>
+      </div>
+    </div>
+    <div class="detail-panel" id="dp2">
+      <div class="dcc tl"></div><div class="dcc tr"></div><div class="dcc bl"></div><div class="dcc br"></div>
+      <span class="dp-close" onclick="closePanel(2)">×</span>
+      <img class="dp-img" src="{{ url_for('static', filename='images/member3.jpg') }}" alt="Member 3"/>
+      <div class="dp-num">// MEMBER 03</div>
+      <div class="dp-name">Team Member 3</div>
+      <div class="dp-row"><span>College</span><b>Your College</b></div>
+      <div class="dp-row"><span>Degree</span><b>B.E. CSE</b></div>
+      <div class="dp-row"><span>Role</span><b>Backend Dev</b></div>
+      <div class="dp-skills">
+        <span class="dp-skill">Database</span><span class="dp-skill">APIs</span>
+        <span class="dp-skill">Testing</span><span class="dp-skill">Logic</span>
+      </div>
+    </div>
+    <div class="detail-panel" id="dp3">
+      <div class="dcc tl"></div><div class="dcc tr"></div><div class="dcc bl"></div><div class="dcc br"></div>
+      <span class="dp-close" onclick="closePanel(3)">×</span>
+      <img class="dp-img" src="{{ url_for('static', filename='images/member4.jpg') }}" alt="Member 4"/>
+      <div class="dp-num">// MEMBER 04</div>
+      <div class="dp-name">Team Member 4</div>
+      <div class="dp-row"><span>College</span><b>Your College</b></div>
+      <div class="dp-row"><span>Degree</span><b>B.E. CSE</b></div>
+      <div class="dp-row"><span>Role</span><b>Integration</b></div>
+      <div class="dp-skills">
+        <span class="dp-skill">Docs</span><span class="dp-skill">Slides</span>
+        <span class="dp-skill">QA</span><span class="dp-skill">Deploy</span>
+      </div>
+    </div>
+
+  </div><!-- /arena-wrap -->
+
+</div><!-- /page -->
+
+<!-- VIDEO MODAL -->
+<div class="modal-backdrop" id="videoModal">
+  <div class="modal-inner">
+    <button class="modal-close" id="closeVideo">×</button>
+    <video id="mainVideo" controls>
+      <source src="{{ url_for('static', filename='videos/video.mp4') }}" type="video/mp4">
+    </video>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
+
+<script>
+/* ══ BG CANVAS ═══════════════════════════════════════ */
+const bgC=document.getElementById('bgCanvas'),bgX=bgC.getContext('2d');
+let W,H;
+function resize(){W=bgC.width=innerWidth;H=bgC.height=innerHeight}
+resize();window.addEventListener('resize',()=>{resize();buildArena()});
+const rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const ORBS=[
+  {xf:0.1,yf:0.18,spd:0.00012,sz:0.62,c:[245,200,66]},
+  {xf:0.9,yf:0.75,spd:0.00009,sz:0.55,c:[224,123,0]},
+  {xf:0.5,yf:0.48,spd:0.00007,sz:0.48,c:[255,140,0]},
+  {xf:0.15,yf:0.82,spd:0.00011,sz:0.36,c:[255,210,80]},
+  {xf:0.85,yf:0.18,spd:0.00008,sz:0.40,c:[200,100,0]},
+];
+function drawBg(ts){
+  bgX.clearRect(0,0,W,H);bgX.fillStyle='#060400';bgX.fillRect(0,0,W,H);
+  const cg=bgX.createRadialGradient(W*.5,H*.42,0,W*.5,H*.42,Math.min(W,H)*.5);
+  cg.addColorStop(0,rgb([38,20,0],.9));cg.addColorStop(1,rgb([6,4,0],0));
+  bgX.fillStyle=cg;bgX.fillRect(0,0,W,H);
+  ORBS.forEach((o,i)=>{
+    const ox=(o.xf+.26*Math.sin(ts*o.spd+i*1.5))*W,oy=(o.yf+.20*Math.cos(ts*o.spd*.75+i*2.1))*H;
+    const r=Math.min(W,H)*o.sz;
+    const g=bgX.createRadialGradient(ox,oy,0,ox,oy,r);
+    g.addColorStop(0,rgb(o.c,.14));g.addColorStop(.45,rgb(o.c,.055));g.addColorStop(1,rgb(o.c,0));
+    bgX.fillStyle=g;bgX.beginPath();bgX.arc(ox,oy,r,0,Math.PI*2);bgX.fill();
+  });
+  const hg=bgX.createLinearGradient(0,H*.52,0,H);
+  hg.addColorStop(0,rgb([245,200,66],0));hg.addColorStop(.55,rgb([245,200,66],.05));hg.addColorStop(1,rgb([245,200,66],0));
+  bgX.fillStyle=hg;bgX.fillRect(0,H*.52,W,H*.48);
+}
+function loop(ts){drawBg(ts);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+/* ══ CURSOR ══════════════════════════════════════════ */
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-ring');
+let mx=-200,my=-200,rx=-200,ry=-200;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function cl(){cur.style.left=mx+'px';cur.style.top=my+'px';rx+=(mx-rx)*.11;ry+=(my-ry)*.11;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(cl)})();
+const TRAIL_N=20;
+const trails=Array.from({length:TRAIL_N},()=>{const d=document.createElement('div');d.className='trail';document.body.appendChild(d);return{el:d,x:0,y:0}});
+(function tl(){let x=mx,y=my;trails.forEach((t,i)=>{t.x+=(x-t.x)*.12;t.y+=(y-t.y)*.12;const s=(TRAIL_N-i)/TRAIL_N*.6;t.el.style.cssText=`left:${t.x}px;top:${t.y}px;width:5px;height:5px;background:rgba(245,200,66,${s*.65});box-shadow:0 0 ${s*9}px rgba(245,200,66,.55);transform:translate(-50%,-50%) scale(${s});opacity:${s*.75};border-radius:50%;filter:blur(2px);`;x=t.x;y=t.y});requestAnimationFrame(tl)})();
+document.querySelectorAll('a,button,.seg-label,.video-circle').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{curR.style.width='50px';curR.style.height='50px';curR.style.opacity='.7'});
+  el.addEventListener('mouseleave',()=>{curR.style.width='36px';curR.style.height='36px';curR.style.opacity='.4'});
+});
+
+/* ══ ARC SEGMENTS ════════════════════════════════════
+   4 segments, each 85° wide with 5° gap = 90° per slot
+   Positioned: Top=270°, Right=0°, Bottom=90°, Left=180°
+   Mid-angle (for label placement): 315°, 45°, 135°, 225°
+══════════════════════════════════════════════════════ */
+const MEMBERS=[
+  {name:'Akash Patil',  midDeg:315},
+  {name:'Member 2',     midDeg:45},
+  {name:'Member 3',     midDeg:135},
+  {name:'Member 4',     midDeg:225},
+];
+
+let activeIdx=-1;
+
+function degToRad(d){return d*Math.PI/180}
+
+function buildArena(){
+  const wrap=document.getElementById('arenaWrap');
+  if(!wrap)return;
+  const size=wrap.offsetWidth;
+  const cx=size/2, cy=size/2;
+  const R=size/2; // outer radius of arc ring
+  const rOuter=R-4;
+  const rInner=R*0.64;  // inner radius of ring (gap from video circle)
+  const GAP=6;          // degrees gap between segments
+
+  const svg=document.getElementById('arcSvg');
+  svg.innerHTML='';
+
+  // Define gold gradient in defs
+  const defs=document.createElementNS('http://www.w3.org/2000/svg','defs');
+  // base gold
+  const grad=document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+  grad.setAttribute('id','goldGrad');grad.setAttribute('gradientTransform','rotate(45)');
+  [['0%','#ffe680'],['35%','#f5c842'],['50%','#c87d00'],['65%','#f5c842'],['100%','#ffe680']].forEach(([o,c])=>{
+    const stop=document.createElementNS('http://www.w3.org/2000/svg','stop');
+    stop.setAttribute('offset',o);stop.setAttribute('stop-color',c);grad.appendChild(stop);
+  });
+  defs.appendChild(grad);
+  // active gold
+  const gradA=document.createElementNS('http://www.w3.org/2000/svg','linearGradient');
+  gradA.setAttribute('id','goldGradA');gradA.setAttribute('gradientTransform','rotate(45)');
+  [['0%','#fffbe8'],['35%','#ffe680'],['50%','#f5c842'],['65%','#e07b00'],['100%','#f5c842']].forEach(([o,c])=>{
+    const stop=document.createElementNS('http://www.w3.org/2000/svg','stop');
+    stop.setAttribute('offset',o);stop.setAttribute('stop-color',c);gradA.appendChild(stop);
+  });
+  defs.appendChild(gradA);
+
+  // glow filter
+  const filt=document.createElementNS('http://www.w3.org/2000/svg','filter');
+  filt.setAttribute('id','arcGlow');filt.setAttribute('x','-20%');filt.setAttribute('y','-20%');filt.setAttribute('width','140%');filt.setAttribute('height','140%');
+  filt.innerHTML='<feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>';
+  defs.appendChild(filt);
+  svg.appendChild(defs);
+
+  const slotCenters = [315, 45, 135, 225]; // 0 TL, 1 TR, 2 BR, 3 BL
+
+  MEMBERS.forEach((m,i)=>{
+    const segmentWidth = 90 - GAP;
+    const startDeg = slotCenters[i] - segmentWidth / 2;
+    const endDeg   = slotCenters[i] + segmentWidth / 2;
+
+    const startRad = degToRad(startDeg - 90);
+    const endRad   = degToRad(endDeg - 90);
+
+    const x1o = cx + rOuter * Math.cos(startRad);
+    const y1o = cy + rOuter * Math.sin(startRad);
+    const x2o = cx + rOuter * Math.cos(endRad);
+    const y2o = cy + rOuter * Math.sin(endRad);
+
+    const x1i = cx + rInner * Math.cos(endRad);
+    const y1i = cy + rInner * Math.sin(endRad);
+    const x2i = cx + rInner * Math.cos(startRad);
+    const y2i = cy + rInner * Math.sin(startRad);
+
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+
+    const d=`M${x1o},${y1o} A${rOuter},${rOuter} 0 ${large},1 ${x2o},${y2o} L${x1i},${y1i} A${rInner},${rInner} 0 ${large},0 ${x2i},${y2i} Z`;
+
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);
+    path.setAttribute('id','arc'+i);
+    path.setAttribute('fill','url(#goldGrad)');
+    path.setAttribute('fill-opacity','0.18');
+    path.setAttribute('stroke','url(#goldGrad)');
+    path.setAttribute('stroke-width','1.2');
+    path.setAttribute('stroke-opacity','0.45');
+    path.setAttribute('style','cursor:pointer;transition:fill-opacity 0.35s,stroke-opacity 0.35s');
+    path.setAttribute('filter','url(#arcGlow)');
+    path.addEventListener('click',()=>toggleMember(i));
+    path.addEventListener('mouseenter',()=>{
+      if(activeIdx!==i){path.setAttribute('fill-opacity','0.3');path.setAttribute('stroke-opacity','0.7')}
+    });
+    path.addEventListener('mouseleave',()=>{
+      if(activeIdx!==i){path.setAttribute('fill-opacity','0.18');path.setAttribute('stroke-opacity','0.45')}
+    });
+    svg.appendChild(path);
+
+    // Tick marks along inner and outer arc
+    for(let t=0;t<=4;t++){
+      const ta=startRad+(endRad-startRad)*t/4;
+      const tx1=cx+(rInner+2)*Math.cos(ta), ty1=cy+(rInner+2)*Math.sin(ta);
+      const tx2=cx+(rInner+8)*Math.cos(ta), ty2=cy+(rInner+8)*Math.sin(ta);
+      const tick=document.createElementNS('http://www.w3.org/2000/svg','line');
+      tick.setAttribute('x1',tx1);tick.setAttribute('y1',ty1);tick.setAttribute('x2',tx2);tick.setAttribute('y2',ty2);
+      tick.setAttribute('stroke','rgba(245,200,66,0.35)');tick.setAttribute('stroke-width','1');
+      svg.appendChild(tick);
+    }
+
+    // Position seg-label at mid-angle, just outside inner ring
+    const midRad=degToRad(m.midDeg-90);
+    const labelR=(rInner+rOuter)/2;
+    const lx=cx+labelR*Math.cos(midRad);
+    const ly=cy+labelR*Math.sin(midRad);
+    const label=document.getElementById('seg'+i);
+    if(label){
+      label.style.left=lx+'px';
+      label.style.top=ly+'px';
+    }
+
+    // Position detail panel — outside the ring, away from center
+    const panelR=rOuter+24;
+    const px=cx+panelR*Math.cos(midRad);
+    const py=cy+panelR*Math.sin(midRad);
+    const panel=document.getElementById('dp'+i);
+    if(panel){
+      // clamp so panels don't go outside wrap
+      const panW=panel.offsetWidth||220;
+      const panH=panel.offsetHeight||260;
+      let finalX=px-panW/2;
+      let finalY=py-panH/2;
+      finalX=Math.max(0,Math.min(size-panW,finalX));
+      finalY=Math.max(0,Math.min(size-panH,finalY));
+      panel.style.left=finalX+'px';
+      panel.style.top=finalY+'px';
+      panel.style.transformOrigin=`${panW/2}px ${panH/2}px`;
+    }
+  });
+}
+
+/* ══ MEMBER TOGGLE ════════════════════════════════════ */
+function toggleMember(idx){
+  if(activeIdx===idx){closePanel(idx);return}
+  if(activeIdx!==-1) closePanel(activeIdx);
+  activeIdx=idx;
+
+  const path=document.getElementById('arc'+idx);
+  if(path){
+    path.setAttribute('fill','url(#goldGradA)');
+    path.setAttribute('fill-opacity','0.4');
+    path.setAttribute('stroke-opacity','0.9');
+  }
+
+  document.getElementById('seg'+idx)?.classList.add('active');
+  document.getElementById('dp'+idx)?.classList.add('open');
+}
+
+document.querySelectorAll(".seg-label").forEach(label => {
+  label.addEventListener("click", function () {
+    const memberIndex = parseInt(this.dataset.member);
+    toggleMember(memberIndex);
+  });
+});
+
+function closePanel(idx){
+  if(activeIdx===idx)activeIdx=-1;
+  const path=document.getElementById('arc'+idx);
+  if(path){
+    path.setAttribute('fill','url(#goldGrad)');
+    path.setAttribute('fill-opacity','0.18');
+    path.setAttribute('stroke-opacity','0.45');
+  }
+  document.getElementById('seg'+idx)?.classList.remove('active');
+  document.getElementById('dp'+idx)?.classList.remove('open');
+}
+
+// Close on outside click
+document.addEventListener('click',e=>{
+  if(activeIdx===-1)return;
+  const wrap=document.getElementById('arenaWrap');
+  if(!wrap.contains(e.target))closePanel(activeIdx);
+});
+
+/* ══ VIDEO MODAL ══════════════════════════════════════ */
+document.getElementById('openVideo').addEventListener('click',()=>{
+  document.getElementById('videoModal').classList.add('active');
+  document.getElementById('mainVideo').play();
+});
+document.getElementById('closeVideo').addEventListener('click',()=>{
+  document.getElementById('videoModal').classList.remove('active');
+  document.getElementById('mainVideo').pause();
+  document.getElementById('mainVideo').currentTime=0;
+});
+document.getElementById('videoModal').addEventListener('click',e=>{
+  if(e.target===document.getElementById('videoModal')){
+    document.getElementById('videoModal').classList.remove('active');
+    document.getElementById('mainVideo').pause();
+    document.getElementById('mainVideo').currentTime=0;
+  }
+});
+
+/* ══ INIT ARENA ═══════════════════════════════════════ */
+window.addEventListener('load',()=>setTimeout(buildArena,100));
+window.addEventListener('resize',()=>setTimeout(buildArena,100));
+
+/* ══ TICKER ═══════════════════════════════════════════ */
+const TICKS=[
+  ['AI PLATFORM','LIVE'],['TEAM SIZE','04'],['NEURAL ENGINE','ACTIVE'],
+  ['PROJECT','ONLINE'],['EVALUATION','REAL-TIME'],['SYSTEM','SECURE'],
+];
+const tk=document.getElementById('ticker');
+tk.innerHTML=[...TICKS,...TICKS].map(([k,v])=>
+  `<div class="tick-i">${k}&nbsp;<span>${v}</span></div><div class="tick-i" style="color:#1a0800;font-size:0.4rem">◆</div>`
+).join('');
+</script>
+</body>
+</html>

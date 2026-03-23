@@ -1,0 +1,11 @@
+next_question = None
+
+    for line in ai_response.split("\n"):
+        line = line.strip().lower()
+
+        if "next question" in line or "question:" in line:
+            parts = line.split(":", 1)
+
+            if len(parts) > 1:
+                next_question = parts[1].strip()
+                break

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>AI Anime Auth</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@700&family=Inter:wght@300;500&display=swap" rel="stylesheet">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    color: white;
+    background: black;
+}
+
+/* 🎬 INTRO */
+.intro {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* 🔥 FIXED TEXT */
+.intro-text span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 110px;
+    margin: 0 8px;
+
+    background: linear-gradient(90deg,#a78bfa,#6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent; /* ✅ FIX */
+    text-decoration: none;
+
+    opacity: 0;
+    transform: translateY(300px) scale(0.3) rotate(30deg);
+    animation: fly 1s forwards;
+
+    text-shadow: 0 0 40px rgba(167,139,250,0.8);
+
+    -webkit-font-smoothing: antialiased;
+}
+
+.intro-text span:nth-child(1){animation-delay:0.2s;}
+.intro-text span:nth-child(2){animation-delay:0.4s;}
+.intro-text span:nth-child(3){animation-delay:0.6s;}
+.intro-text span:nth-child(4){animation-delay:0.8s;}
+.intro-text span:nth-child(5){animation-delay:1s;}
+.intro-text span:nth-child(6){animation-delay:1.2s;}
+
+@keyframes fly {
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0);
+    }
+}
+
+.fade-out {
+    animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+}
+
+/* 🎥 VIDEO */
+video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+}
+
+/* 🌑 OVERLAY */
+.overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(10,10,15,0.75); /* 🔥 slightly darker for premium */
+    z-index: -1;
+}
+
+/* 📦 CONTAINER */
+.container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: 1s ease;
+}
+
+/* 💎 BOX */
+.box {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    
+    width: 320px;
+    padding: 40px;
+    
+    border-radius: 20px;
+    backdrop-filter: blur(20px); /* 🔥 smoother blur */
+    
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+
+    transition: 0.6s ease;
+}
+
+/* LEFT LOGIN */
+.login-box {
+    left: 80px;
+}
+
+/* RIGHT SIGNUP */
+.signup-box {
+    right: -400px;
+}
+
+/* INFO */
+.info {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 320px;
+    transition: 0.6s ease;
+    opacity: 0.9;
+}
+
+/* LEFT INFO */
+.info-left {
+    left: 500px;
+}
+
+/* RIGHT INFO */
+.info-right {
+    right: -500px;
+    text-align: right;
+}
+
+/* SHOW SIGNUP MODE */
+.show-signup .signup-box {
+    right: 80px;
+}
+
+.show-signup .login-box {
+    left: -400px;
+}
+
+.show-signup .info-left {
+    left: -400px;
+}
+
+.show-signup .info-right {
+    right: 500px;
+}
+
+/* TEXT */
+.info h1 {
+    font-size: 26px;
+    margin-bottom: 10px;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.info p {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* INPUT */
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 12px 0;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255,255,255,0.08);
+    color: white;
+    outline: none;
+    transition: 0.3s;
+}
+
+input:focus {
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 10px rgba(167,139,250,0.4);
+}
+
+/* BUTTON */
+button {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: linear-gradient(135deg, #a78bfa, #818cf8);
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(167,139,250,0.4);
+}
+
+/* LINK */
+.link {
+    margin-top: 12px;
+    font-size: 13px;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+/* 🟣 MOUSE TRAIL */
+.trail {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(167,139,250,0.5);
+    pointer-events: none;
+    filter: blur(6px);
+    z-index: 10;
+}
+</style>
+</head>
+
+<body>
+
+<!-- 🎬 INTRO -->
+<div class="intro" id="intro">
+    <div class="intro-text">
+        <span>U</span>
+        <span>D</span>
+        <span>D</span>
+        <span>A</span>
+        <span>A</span>
+        <span>N</span>
+    </div>
+</div>
+
+<!-- 🎥 VIDEO -->
+<video autoplay muted loop>
+    <source src="anime.mp4" type="video/mp4">
+</video>
+
+<div class="overlay"></div>
+
+<div class="container" id="container">
+
+    <!-- LOGIN -->
+    <div class="box login-box">
+        <h2>Login</h2>
+        <input type="email" placeholder="Email">
+        <input type="password" placeholder="Password">
+        <button>Login</button>
+        <div class="link" onclick="showSignup()">Go to Signup →</div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div class="box signup-box">
+        <h2>Create Account ⚡</h2>
+        <input type="text" placeholder="Name">
+        <input type="email" placeholder="Email">
+        <input type="password" placeholder="Password">
+        <button>Signup</button>
+        <div class="link" onclick="showLogin()">← Back to Login</div>
+    </div>
+
+    <!-- INFO LEFT -->
+    <div class="info info-left">
+        <h1>Welcome Back 👋</h1>
+        <p>Login to access your AI dashboard and features.</p>
+    </div>
+
+    <!-- INFO RIGHT -->
+    <div class="info info-right">
+        <h1>Join the Future ⚡</h1>
+        <p>Create account to unlock AI power and smart tools.</p>
+    </div>
+
+</div>
+
+<script>
+let container = document.getElementById("container");
+
+/* SWITCH */
+function showSignup() {
+    container.classList.add("show-signup");
+}
+
+function showLogin() {
+    container.classList.remove("show-signup");
+}
+
+/* 🎬 INTRO CONTROL */
+let intro = document.getElementById("intro");
+
+setTimeout(() => {
+    intro.classList.add("fade-out");
+
+    setTimeout(() => {
+        intro.style.display = "none";
+        container.style.opacity = "1";
+    }, 1000);
+
+}, 3500);
+
+/* 🔥 MOUSE TRAIL */
+const trailCount = 25;
+let trails = [];
+
+for (let i = 0; i < trailCount; i++) {
+    let dot = document.createElement("div");
+    dot.classList.add("trail");
+    document.body.appendChild(dot);
+    trails.push({ el: dot, x: 0, y: 0 });
+}
+
+let mouseX = 0;
+let mouseY = 0;
+
+document.addEventListener("mousemove", (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+});
+
+function animateTrail() {
+    let x = mouseX;
+    let y = mouseY;
+
+    trails.forEach((trail, index) => {
+        trail.x += (x - trail.x) * 0.15;
+        trail.y += (y - trail.y) * 0.15;
+
+        trail.el.style.transform =
+            `translate(${trail.x}px, ${trail.y}px) scale(${(trailCount - index) / trailCount})`;
+
+        x = trail.x;
+        y = trail.y;
+    });
+
+    requestAnimationFrame(animateTrail);
+}
+
+animateTrail();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Complete | Premium Neural Link</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --card-bg: rgba(15, 23, 42, 0.6);
+            --primary: #38bdf8;
+            --accent: #818cf8;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --glow: rgba(56, 189, 248, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-dark);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-main);
+            overflow: hidden;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 60px 40px;
+            border-radius: 40px;
+            width: 90%;
+            max-width: 480px;
+            text-align: center;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
+            animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes cardAppear {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        h2 {
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 12px;
+            background: linear-gradient(to right, #fff, var(--text-dim));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-msg {
+            color: var(--text-dim);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .score-wrapper {
+            position: relative;
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .score-circle-svg {
+            position: absolute;
+            transform: rotate(-90deg);
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.05);
+            stroke-width: 10;
+        }
+
+        .circle-progress {
+            fill: none;
+            stroke: url(#scoreGradient);
+            stroke-width: 10;
+            stroke-linecap: round;
+            stroke-dasharray: 440;
+            stroke-dashoffset: 132; /* Calculation: 440 - (440 * score/10) */
+            animation: progressAnim 1.5s ease-out forwards;
+        }
+        
+        .reward-box {
+            margin-top: 18px;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 22px;
+            border-radius: 14px;
+            background: rgba(0, 240, 255, 0.08);
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.12);
+        }
+
+        .reward-label {
+            font-size: 13px;
+            color: #aaa;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .reward-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: #00f0ff;
+            margin-top: 4px;
+        }
+
+
+        @keyframes progressAnim {
+            from { stroke-dashoffset: 440; }
+        }
+
+        .score-content {
+            z-index: 2;
+            text-align: center;
+        }
+
+        .score-value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            color: #fff;
+            display: block;
+            line-height: 1;
+            text-shadow: 0 0 20px var(--glow);
+        }
+
+        .score-max {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .btn-dashboard {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 18px 30px;
+            background: #fff;
+            color: #020617;
+            text-decoration: none;
+            border-radius: 18px;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-dashboard:hover {
+            transform: translateY(-4px);
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 15px 30px var(--glow);
+        }
+
+                .feedback-box {
+            margin-top: 30px;
+            text-align: left;
+            padding: 22px;
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .feedback-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+            text-align: center;
+        }
+
+        .feedback-item {
+            margin-bottom: 16px;
+        }
+
+        .feedback-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .feedback-label {
+            display: block;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .feedback-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="summary-card">
+        <h2>Analysis Ready</h2>
+        <p class="status-msg">Assessment complete. Your performance metrics have been synced with your profile.</p>
+        <div class="reward-box">
+                    <span class="reward-label">Credits Earned</span>
+                    <span class="reward-value">+{{ reward_credits }}</span>
+                </div>
+        <div class="score-wrapper">
+            <svg class="score-circle-svg" width="180" height="180">
+                <defs>
+                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#38bdf8" />
+                        <stop offset="100%" stop-color="#818cf8" />
+                    </linearGradient>
+                </defs>
+                <circle class="circle-bg" cx="90" cy="90" r="75"></circle>
+                <circle class="circle-progress" cx="90" cy="90" r="75"></circle>
+            </svg>
+            
+            <div class="score-content">
+                <span class="score-value">{{ "%.1f"|format(average_score) }}</span>
+                <span class="score-max">/ 10</span>
+
+            </div>
+            
+        </div>
+
+        <div class="feedback-box">
+            <div class="feedback-title">Interview Feedback</div>
+
+            <div class="feedback-item">
+                <span class="feedback-label">Strengths</span>
+                <div class="feedback-text">{{ strengths }}</div>
+            </div>
+
+            <div class="feedback-item">
+                <span class="feedback-label">Weaknesses</span>
+                <div class="feedback-text">{{ weaknesses }}</div>
+            </div>
+
+            <div class="feedback-item">
+                <span class="feedback-label">Overall Feedback</span>
+                <div class="feedback-text">{{ overall_feedback }}</div>
+            </div>
+        </div>
+
+        <a href="/dashboard" class="btn-dashboard">
+            Open Dashboard
+        </a>
+    </div>
+
+</body>
+</html>

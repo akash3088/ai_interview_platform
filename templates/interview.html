@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview | Neural Interface Pro</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.69/build/spline-viewer.js"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14"
+        }
+    }
+    </script>
+
+    <style>
+        :root {
+            --neon: #00f0ff;
+            --neon-glow: rgba(0, 240, 255, 0.4);
+            --bg-dark: #050505;
+            --glass: rgba(255, 255, 255, 0.05);
+            --font-head: 'Syncopate', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --danger: #ff3b3b;
+            --danger-glow: rgba(255, 59, 59, 0.35);
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
+        body {
+            font-family: var(--font-body);
+            background: var(--bg-dark);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #selfView {
+            position: fixed;
+            top: 30px; 
+            right: 30px;
+            width: 180px;
+            aspect-ratio: 16/9;
+            object-fit: cover;
+            border-radius: 15px;
+            border: 2px solid rgba(0, 240, 255, 0.3);
+            z-index: 20;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
+            background: #000;
+        }
+
+        #emotionBox {
+            position: fixed;
+            top: 145px;
+            right: 30px;
+            width: 180px;
+            min-height: 58px;
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(0, 240, 255, 0.25);
+            background: rgba(5, 10, 18, 0.82);
+            backdrop-filter: blur(10px);
+            z-index: 21;
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        #emotionLabel {
+            font-size: 0.7rem;
+            letter-spacing: 1.5px;
+            color: rgba(255,255,255,0.65);
+            text-transform: uppercase;
+        }
+
+        #emotionText {
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        #splineViewer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            filter: brightness(0.7);
+        }
+
+        .interact-zone {
+            position: relative;
+            z-index: 10;
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+            padding-bottom: 90px;
+            margin-top: auto;
+        }
+
+        .question-display {
+            text-align: center;
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 25px 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            animation: fadeInDown 1s ease-out;
+        }
+
+        #currentQuestion { 
+            font-size: 1.2rem; 
+            color: #fff; 
+            font-weight: 300; 
+            letter-spacing: 1px;
+            line-height: 1.5;
+        }
+
+        .input-container {
+            width: 100%;
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 70px;
+            max-height: 180px;
+            background: var(--glass);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 18px 25px;
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            transition: all 0.4s ease;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        textarea:focus {
+            border-color: var(--neon);
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 15px var(--neon-glow);
+            text-align: left;
+        }
+
+        form {
+            width: 100%;
+        }
+
+        .dock {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            animation: fadeInUp 1s ease-out;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-main {
+            background: var(--neon);
+            color: #000;
+            padding: 12px 40px;
+            border-radius: 50px;
+            font-family: var(--font-head);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s ease;
+            letter-spacing: 2px;
+            box-shadow: 0 0 20px var(--neon-glow);
+        }
+
+        .btn-main:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 0 35px var(--neon);
+        }
+
+        .btn-main:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .meeting-controls {
+            position: fixed;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 240, 255, 0.18);
+            padding: 12px 22px;
+            border-radius: 40px;
+            display: flex;
+            gap: 18px;
+            align-items: center;
+            z-index: 30;
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.08);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .meeting-controls button {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 50%;
+            width: 52px;
+            height: 52px;
+            cursor: pointer;
+            color: white;
+            font-size: 18px;
+            transition: 0.3s ease;
+        }
+
+        .meeting-controls button:hover {
+            background: rgba(0, 240, 255, 0.12);
+            border-color: rgba(0, 240, 255, 0.45);
+            box-shadow: 0 0 18px rgba(0, 240, 255, 0.15);
+            transform: translateY(-2px);
+        }
+
+        #disconnectBtn {
+            background: rgba(255, 59, 59, 0.14);
+            border-color: rgba(255, 59, 59, 0.35);
+        }
+
+        #disconnectBtn:hover {
+            background: rgba(255, 59, 59, 0.22);
+            box-shadow: 0 0 20px var(--danger-glow);
+        }
+
+        #warningBox {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 59, 59, 0.14);
+            border: 1px solid rgba(255, 59, 59, 0.5);
+            color: #fff;
+            padding: 14px 18px;
+            border-radius: 12px;
+            display: none;
+            z-index: 999;
+            box-shadow: 0 0 20px var(--danger-glow);
+            backdrop-filter: blur(12px);
+            min-width: 220px;
+            animation: fadeInDown 0.35s ease;
+        }
+
+        .back-link {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 30;
+            color: var(--neon);
+            text-decoration: none;
+            font-size: 0.95rem;
+            letter-spacing: 1px;
+            background: rgba(10, 10, 10, 0.55);
+            border: 1px solid rgba(0, 240, 255, 0.18);
+            backdrop-filter: blur(10px);
+            padding: 10px 14px;
+            border-radius: 12px;
+            transition: 0.3s ease;
+        }
+
+        .back-link:hover {
+            box-shadow: 0 0 14px var(--neon-glow);
+            background: rgba(0, 240, 255, 0.08);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body::before {
+            content: " ";
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background:
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 4px, 3px 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #selfView {
+                width: 130px;
+                top: 16px;
+                right: 16px;
+            }
+
+            #emotionBox {
+                width: 130px;
+                top: 104px;
+                right: 16px;
+                min-height: 52px;
+                padding: 8px 10px;
+            }
+
+            .interact-zone {
+                width: 92%;
+                padding-bottom: 110px;
+            }
+
+            .question-display {
+                padding: 20px;
+            }
+
+            #currentQuestion {
+                font-size: 1rem;
+            }
+
+            .btn-main {
+                width: 100%;
+            }
+
+            .meeting-controls {
+                gap: 12px;
+                padding: 10px 16px;
+            }
+
+            .meeting-controls button {
+                width: 46px;
+                height: 46px;
+            }
+
+            .back-link {
+                bottom: 92px;
+                left: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="warningBox">Warning</div>
+
+    <video id="selfView" autoplay playsinline muted></video>
+
+    <div id="emotionBox">
+        <span id="emotionLabel">Emotion Status</span>
+        <span id="emotionText">Loading detector...</span>
+    </div>
+
+    <spline-viewer id="splineViewer" url="https:/cc/prod.spline.design/N94mv8IXbKFow6Xi/scene.splinecode"></spline-viewer>
+
+    <div class="interact-zone" id="uiZone">
+        <div class="question-display">
+            <span id="currentQuestion">{{ question }}</span>
+        </div>
+
+        <form method="POST" id="answerForm">
+            <input type="hidden" name="question" value="{{ question }}">
+            <div class="input-container">
+                <textarea name="answer" id="answer" placeholder="Respond to the interface..." rows="3"></textarea>
+            </div>
+
+            <div class="dock">
+                <button type="submit" class="btn-main" id="submitBtn">
+                    <i class="fa-solid fa-paper-plane" style="margin-right: 8px;"></i> TRANSMIT
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="meeting-controls">
+        <button id="micBtn" type="button" onclick="toggleMic()">
+            <i id="micIcon" class="fa-solid fa-microphone"></i>
+        </button>
+
+        <button id="camBtn" type="button" onclick="toggleCamera()">
+            <i id="camIcon" class="fa-solid fa-video"></i>
+        </button>
+
+        <button id="disconnectBtn" type="button" onclick="disconnectInterview()">
+            <i class="fa-solid fa-phone-slash"></i>
+        </button>
+    </div>
+
+    <a href="/dashboard" class="back-link">← Back to Dashboard</a>
+
+    <script type="module">
+        import { FaceLandmarker, FilesetResolver } from "@mediapipe/tasks-vision";
+
+        speechSynthesis.onvoiceschanged = function() {};
+
+        let videoElement = document.getElementById("selfView");
+        let warningBox = document.getElementById("warningBox");
+        let answerBox = document.getElementById("answer");
+        let submitBtn = document.getElementById("submitBtn");
+        let emotionText = document.getElementById("emotionText");
+
+        let mediaStream = null;
+        let cameraOn = true;
+        let micOn = true;
+        let tabWarningActive = false;
+        let brightnessInterval = null;
+        let recognition = null;
+        let faceLandmarker = null;
+        let emotionInterval = null;
+        let emotionModelReady = false;
+
+        function showWarning(message) {
+            warningBox.innerText = message;
+            warningBox.style.display = "block";
+        }
+
+        function clearWarning() {
+            warningBox.style.display = "none";
+        }
+
+        function updateEmotionUI(label) {
+            emotionText.innerText = `${label} `;
+        }
+
+        function speakText(text) {
+            if (!text || !text.trim()) return;
+
+            speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = "en-US";
+            utterance.rate = 1;
+            utterance.pitch = 0.95;
+
+            utterance.onstart = function () {
+                document.getElementById("currentQuestion").innerText = text;
+            };
+
+            speechSynthesis.speak(utterance);
+        }
+
+        async function loadEmotionDetector() {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+                );
+
+                faceLandmarker = await FaceLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+                    },
+                    runningMode: "VIDEO",
+                    numFaces: 1,
+                    outputFaceBlendshapes: true
+                });
+
+                emotionModelReady = true;
+                updateEmotionUI("Neutral", 0);
+                startEmotionDetection();
+            } catch (error) {
+                console.error("Emotion model load failed:", error);
+                emotionText.innerText = "Emotion detection unavailable";
+            }
+        }
+
+        async function initMedia() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+
+                videoElement.srcObject = mediaStream;
+                await videoElement.play();
+
+                startBrightnessDetection();
+                if (emotionModelReady) {
+                    startEmotionDetection();
+                }
+            } catch (err) {
+                console.error("Media error:", err);
+                showWarning("Camera or Mic access denied!");
+                emotionText.innerText = "Camera required for emotion check";
+            }
+        }
+
+        function startBrightnessDetection() {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            if (brightnessInterval) clearInterval(brightnessInterval);
+
+            function checkBrightness() {
+                if (!videoElement || !cameraOn) return;
+                if (!videoElement.videoWidth || !videoElement.videoHeight) return;
+
+                canvas.width = videoElement.videoWidth;
+                canvas.height = videoElement.videoHeight;
+
+                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+                const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = frame.data;
+
+                let total = 0;
+                for (let i = 0; i < data.length; i += 4) {
+                    total += (data[i] + data[i + 1] + data[i + 2]) / 3;
+                }
+
+                const brightness = total / (data.length / 4);
+
+                if (brightness < 40) {
+                    showWarning("Camera covered or too dark!");
+                } else {
+                    if (!tabWarningActive) {
+                        clearWarning();
+                    }
+                }
+            }
+
+            brightnessInterval = setInterval(checkBrightness, 3000);
+        }
+
+        function classifyEmotion(blendshapes) {
+            if (!blendshapes || !blendshapes.length) {
+                return { label: "No face detected", score: 0 };
+            }
+
+            const map = {};
+            blendshapes[0].categories.forEach(item => {
+                map[item.categoryName] = item.score;
+            });
+
+            const smile = ((map.mouthSmileLeft || 0) + (map.mouthSmileRight || 0)) / 2;
+            const frown = ((map.mouthFrownLeft || 0) + (map.mouthFrownRight || 0)) / 2;
+            const browSad = (map.browInnerUp || 0) + ((map.browDownLeft || 0) + (map.browDownRight || 0)) / 2;
+            const mouthPress = ((map.lipPressLeft || 0) + (map.lipPressRight || 0)) / 2;
+
+            if (smile > 0.38 && smile > frown + 0.12) {
+                return { label: "Happy", score: 1 };
+            }
+
+            if ((frown > 0.22 || browSad > 0.5 || mouthPress > 0.35) && smile < 0.25) {
+                return { label: "Sad", score: -1 };
+            }
+
+            return { label: "Neutral", scores: 0 };
+        }
+
+        function startEmotionDetection() {
+            if (!faceLandmarker || emotionInterval) return;
+
+            emotionInterval = setInterval(() => {
+                if (!cameraOn) {
+                    updateEmotionUI("Camera Off", 0);
+                    return;
+                }
+
+                if (!videoElement.videoWidth || !videoElement.videoHeight) return;
+
+                try {
+                    const result = faceLandmarker.detectForVideo(videoElement, performance.now());
+                    const emotion = classifyEmotion(result.faceBlendshapes || []);
+                    updateEmotionUI(emotion.label, emotion.score);
+                } catch (error) {
+                    console.error("Emotion detection error:", error);
+                }
+            }, 1500);
+        }
+
+        function stopEmotionDetection() {
+            if (emotionInterval) {
+                clearInterval(emotionInterval);
+                emotionInterval = null;
+            }
+        }
+
+        function startSpeechRecognition() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = "en-US";
+
+                recognition.onresult = function (event) {
+                    let transcript = "";
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        transcript += event.results[i][0].transcript;
+                    }
+
+                    answerBox.value = transcript;
+                };
+
+                recognition.onerror = function (event) {
+                    console.error("Speech recognition error:", event.error);
+                };
+
+                recognition.onend = function () {
+                    if (micOn) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            console.log("Recognition restart blocked:", e);
+                        }
+                    }
+                };
+
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.log("Recognition start failed:", e);
+                }
+            }
+        }
+
+        window.toggleCamera = function toggleCamera() {
+            if (!mediaStream) return;
+
+            const videoTrack = mediaStream.getVideoTracks()[0];
+            const camIcon = document.getElementById("camIcon");
+
+            cameraOn = !cameraOn;
+            videoTrack.enabled = cameraOn;
+
+            camIcon.classList.toggle("fa-video");
+            camIcon.classList.toggle("fa-video-slash");
+
+            if (!cameraOn) {
+                updateEmotionUI("Camera Off", 0);
+                showWarning("Camera turned off!");
+            } else if (!tabWarningActive) {
+                clearWarning();
+            }
+        }
+
+        window.toggleMic = function toggleMic() {
+            if (!mediaStream) return;
+
+            const audioTrack = mediaStream.getAudioTracks()[0];
+            const micIcon = document.getElementById("micIcon");
+
+            micOn = !micOn;
+            audioTrack.enabled = micOn;
+
+            micIcon.classList.toggle("fa-microphone");
+            micIcon.classList.toggle("fa-microphone-slash");
+
+            if (recognition) {
+                if (micOn) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        console.log("Recognition already started:", e);
+                    }
+                } else {
+                    recognition.stop();
+                }
+            }
+        }
+
+        window.disconnectInterview = function disconnectInterview() {
+            speechSynthesis.cancel();
+
+            if (recognition) {
+                try { recognition.stop(); } catch (e) {}
+            }
+
+            if (brightnessInterval) {
+                clearInterval(brightnessInterval);
+            }
+
+            stopEmotionDetection();
+
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+            }
+
+            window.location.href = "/dashboard";
+        }
+
+        document.addEventListener("visibilitychange", function () {
+            if (document.hidden) {
+                tabWarningActive = true;
+                showWarning("Do not switch tabs!");
+            } else {
+                tabWarningActive = false;
+                clearWarning();
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const questionElement = document.getElementById("currentQuestion");
+
+            if (questionElement && questionElement.innerText.trim() !== "") {
+                setTimeout(() => {
+                    speakText(questionElement.innerText);
+                }, 300);
+            }
+        });
+
+        document.getElementById("answerForm").addEventListener("submit", function () {
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> PROCESSING';
+            submitBtn.style.opacity = "0.8";
+        });
+
+        answerBox.addEventListener("keydown", function(e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                document.getElementById("answerForm").submit();
+            }
+        });
+
+        initMedia();
+        loadEmotionDetector();
+        startSpeechRecognition();
+    </script>
+</body>
+</html>

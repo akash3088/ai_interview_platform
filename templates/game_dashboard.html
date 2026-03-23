@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dungeon Arena | Elite Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#ffd166;
+  --cyan:#4cc9f0;
+  --red:#ef4444;
+  --green:#06d6a0;
+  --amber:#f59e0b;
+  --bg:#04040a;
+  --bg2:#07070f;
+  --dim:#222230;
+  --txt:#e8edf8;
+  --card:rgba(255,255,255,0.025);
+  --border:rgba(255,255,255,0.07);
+  --glow-g:rgba(255,209,102,0.4);
+  --glow-c:rgba(76,201,240,0.4);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{
+  min-height:100vh;background:var(--bg);color:var(--txt);
+  font-family:'Rajdhani',sans-serif;
+  padding:60px 24px 100px;overflow-x:hidden;
+  position:relative;cursor:none;
+}
+
+/* CURSOR */
+#cur{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--gold);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 12px var(--gold),0 0 24px var(--glow-g)}
+#cur-ring{position:fixed;width:34px;height:34px;border:1px solid var(--gold);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:0.45;transition:width 0.25s,height 0.25s}
+.trail{position:fixed;border-radius:50%;pointer-events:none;z-index:9990;transform:translate(-50%,-50%)}
+
+/* BG */
+#bgCanvas{position:fixed;inset:0;z-index:-10}
+.scan{position:fixed;inset:0;z-index:-8;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px)}
+.grain{position:fixed;inset:0;z-index:-7;pointer-events:none;opacity:0.032;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:180px}
+.vignette{position:fixed;inset:0;z-index:-6;pointer-events:none;background:radial-gradient(ellipse 85% 80% at 50% 40%,transparent 30%,rgba(2,2,8,0.9) 100%)}
+.grid-bg{position:fixed;inset:0;z-index:-9;pointer-events:none;
+  background-image:linear-gradient(rgba(76,201,240,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(76,201,240,0.02) 1px,transparent 1px);
+  background-size:60px 60px;
+  mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent)}
+
+.wrap{max-width:1140px;margin:0 auto;position:relative;z-index:1}
+
+/* HEADER */
+.page-header{text-align:center;margin-bottom:80px;position:relative}
+.header-pre{
+  font-family:'Share Tech Mono',monospace;
+  font-size:0.6rem;letter-spacing:8px;color:rgba(76,201,240,0.5);
+  text-transform:uppercase;margin-bottom:16px;
+  opacity:0;transform:translateY(10px);
+  animation:fadeDown 0.6s 0.3s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.header-title{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(70px,14vw,150px);
+  letter-spacing:28px;
+  line-height:0.9;
+  background:linear-gradient(180deg,#fff 30%,rgba(255,255,255,0.25) 100%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+  position:relative;
+  filter:drop-shadow(0 0 60px rgba(255,255,255,0.1));
+  opacity:0;transform:translateY(18px);
+  animation:riseUp 0.9s 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+}
+.header-title:hover{animation:glitchPulse 0.4s steps(2) forwards}
+@keyframes glitchPulse{
+  0%{text-shadow:none;transform:none}
+  20%{text-shadow:-3px 0 var(--cyan),3px 0 var(--gold);transform:skewX(-2deg)}
+  40%{text-shadow:3px 0 var(--red),-3px 0 var(--cyan);transform:skewX(2deg)}
+  60%{text-shadow:-2px 0 var(--gold),2px 0 var(--cyan);transform:skewX(-1deg)}
+  100%{text-shadow:none;transform:none}
+}
+.header-sub{
+  margin-top:18px;
+  font-family:'Share Tech Mono',monospace;
+  font-size:0.68rem;letter-spacing:6px;color:#555;
+  text-transform:uppercase;
+  opacity:0;transform:translateY(10px);
+  animation:fadeDown 0.6s 0.9s forwards;
+}
+.header-sub b{color:var(--gold);text-shadow:0 0 10px var(--glow-g)}
+.role-badge{
+  display:inline-flex;align-items:center;gap:10px;
+  margin-top:20px;
+  padding:8px 20px;
+  border:1px solid rgba(255,209,102,0.2);
+  background:rgba(255,209,102,0.05);
+  font-family:'Share Tech Mono',monospace;
+  font-size:0.6rem;letter-spacing:4px;text-transform:uppercase;
+  color:var(--gold);
+  opacity:0;transform:translateY(10px);
+  animation:fadeDown 0.6s 1.1s forwards;
+}
+.role-badge-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);box-shadow:0 0 8px var(--gold);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.1}}
+@keyframes fadeDown{to{opacity:1;transform:translateY(0)}}
+@keyframes riseUp{to{opacity:1;transform:translateY(0)}}
+
+.top-dashboard-btn{
+  position:fixed;
+  top:25px;
+  right:25px;
+  z-index:999;
+  text-decoration:none;
+  padding:12px 20px;
+  background:linear-gradient(135deg,#7e5bef,#fcd34d);
+  color:white;
+  font-family:'Share Tech Mono',monospace;
+  font-size:12px;
+  font-weight:bold;
+  text-transform:uppercase;
+  letter-spacing:2px;
+  box-shadow:0 0 20px rgba(126,91,239,0.35);
+  transition:0.3s ease;
+}
+.top-dashboard-btn:hover{
+  transform:translateY(-2px) scale(1.03);
+  box-shadow:0 0 28px rgba(252,211,77,0.45);
+}
+
+.sec-title{
+  font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:6px;
+  text-transform:uppercase;color:var(--txt);
+  display:flex;align-items:center;gap:16px;
+  margin:70px 0 28px;
+}
+.sec-title::before{content:'';width:3px;height:28px;background:var(--cyan);box-shadow:0 0 10px var(--cyan)}
+.sec-title::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,var(--border),transparent)}
+.sec-num{font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:3px;color:var(--cyan);margin-left:4px;opacity:0.6}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.stat-card{
+  background:var(--card);
+  border:1px solid var(--border);
+  padding:28px 24px;
+  position:relative;overflow:hidden;
+  transition:all 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--card-accent,var(--cyan)),transparent);
+  opacity:0;transition:opacity 0.4s;
+}
+.stat-card:hover::before{opacity:1}
+.stat-card:hover{
+  border-color:rgba(76,201,240,0.25);
+  background:rgba(76,201,240,0.04);
+  transform:translateY(-6px);
+  box-shadow:0 20px 50px rgba(0,0,0,0.5),0 0 30px rgba(76,201,240,0.05);
+}
+.stat-card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,0.02) 50%,transparent 65%);
+  background-size:300% 100%;animation:shimmer 5s ease-in-out infinite;pointer-events:none;
+}
+@keyframes shimmer{0%{background-position:150% 0}100%{background-position:-150% 0}}
+.s-label{font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:4px;color:#444;text-transform:uppercase;margin-bottom:10px}
+.s-val{font-family:'Bebas Neue',sans-serif;font-size:44px;line-height:1;letter-spacing:2px}
+.s-bar{margin-top:12px;height:2px;background:rgba(255,255,255,0.05);overflow:hidden}
+.s-bar-fill{height:100%;background:var(--card-accent,var(--cyan));box-shadow:0 0 8px var(--card-accent,var(--cyan));width:0;transition:width 1.5s 0.5s cubic-bezier(0.22,1,0.36,1)}
+.s-change{font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:2px;margin-top:6px;opacity:0.5}
+
+/* LAYOUT */
+.two-col{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+@media(max-width:900px){.two-col{grid-template-columns:1fr}}
+.arsenal-grid{display:grid;gap:16px}
+
+/* UPGRADE CARDS */
+.upgrade-card{
+  background:rgba(0,0,0,0.45);
+  border:1px solid var(--border);
+  padding:32px;position:relative;overflow:hidden;
+  transition:all 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.upgrade-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.015),transparent);pointer-events:none}
+.upgrade-card:hover{border-color:rgba(255,255,255,0.12);transform:translateX(4px)}
+.uc-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:4px;margin-bottom:18px}
+.uc-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:24px}
+.uc-row{display:flex;justify-content:space-between;align-items:center;font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:2px;color:#555;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04)}
+.uc-row b{color:var(--txt);font-size:0.68rem}
+
+.act-btn{
+  width:100%;padding:16px;border:none;
+  font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:5px;
+  text-transform:uppercase;cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:all 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.act-btn::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);transition:left 0.5s}
+.act-btn:hover:not(:disabled)::before{left:140%}
+.act-btn:hover:not(:disabled){letter-spacing:7px;transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,0.5)}
+.act-btn:disabled{background:#111!important;color:#333!important;cursor:not-allowed;letter-spacing:5px}
+.btn-attack{background:#fff;color:#000;font-weight:900}
+.btn-xp{background:var(--cyan);color:#000;font-weight:900}
+.btn-def{background:#3a86ff;color:#fff}
+
+/* RADAR */
+.radar-card{
+  background:rgba(0,0,0,0.45);border:1px solid var(--border);
+  padding:28px;position:sticky;top:20px;
+}
+.radar-title{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:4px;margin-bottom:4px;color:var(--cyan)}
+.radar-sub{font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:3px;color:#444;margin-bottom:20px}
+#radarCanvas{display:block;margin:0 auto;width:100%;max-width:280px}
+.radar-legend{margin-top:18px;display:flex;flex-direction:column;gap:6px}
+.rl-item{display:flex;align-items:center;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:2px;color:#444}
+.rl-dot{width:6px;height:6px;border-radius:50%;margin-right:8px}
+.rl-val{color:var(--txt);font-size:0.62rem}
+
+/* STAGES */
+.missions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.stage-card{
+  background:rgba(0,0,0,0.5);border:1px solid var(--border);
+  padding:32px;position:relative;overflow:hidden;
+  transition:all 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.stage-card::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:2px;
+  background:var(--cyan);transform:scaleY(0);transform-origin:bottom;
+  transition:transform 0.4s cubic-bezier(0.22,1,0.36,1);
+}
+.stage-card:hover::before{transform:scaleY(1)}
+.stage-card:hover{border-color:rgba(76,201,240,0.15);transform:translateX(6px);box-shadow:4px 0 0 var(--cyan)}
+.sc-num{font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:4px;color:var(--cyan);margin-bottom:6px;opacity:0.7}
+.sc-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px;margin-bottom:6px}
+.sc-sub{font-family:'Share Tech Mono',monospace;font-size:0.54rem;letter-spacing:2px;color:#333;margin-bottom:24px}
+.diff-row{display:flex;gap:8px;flex-wrap:wrap}
+.diff-btn{
+  flex:1;padding:13px 8px;
+  font-family:'Share Tech Mono',monospace;font-size:0.58rem;letter-spacing:3px;
+  text-decoration:none;text-align:center;text-transform:uppercase;
+  border:1px solid rgba(255,255,255,0.07);
+  background:transparent;
+  transition:all 0.3s;position:relative;overflow:hidden;
+  cursor:pointer;
+}
+.diff-btn::before{content:'';position:absolute;inset:0;background:currentColor;opacity:0;transition:opacity 0.3s}
+.diff-btn:hover::before{opacity:0.12}
+.diff-btn:hover{background:transparent!important;color:currentColor!important;box-shadow:0 0 16px currentColor;transform:translateY(-2px)}
+.diff-btn.easy{color:var(--green);border-color:rgba(6,214,160,0.2)}
+.diff-btn.medium{color:var(--amber);border-color:rgba(245,158,11,0.2)}
+.diff-btn.hard{color:var(--red);border-color:rgba(239,68,68,0.2)}
+.diff-btn.locked{color:#222;border-color:rgba(255,255,255,0.03);cursor:not-allowed;pointer-events:none}
+
+/* TICKER */
+.ticker-wrap{position:fixed;bottom:0;left:0;right:0;z-index:50;background:rgba(3,3,8,0.95);border-top:1px solid rgba(76,201,240,0.07);padding:9px 0;overflow:hidden}
+.ticker-inner{display:flex;gap:56px;white-space:nowrap;animation:tickRoll 40s linear infinite}
+@keyframes tickRoll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.tick-i{font-family:'Share Tech Mono',monospace;font-size:0.54rem;letter-spacing:3px;color:#2a2a3a;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.tick-i span{color:var(--cyan);text-shadow:0 0 10px var(--glow-c)}
+
+.footer{text-align:center;margin-top:100px;font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:5px;color:#1a1a28;text-transform:uppercase}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity 0.7s cubic-bezier(0.22,1,0.36,1),transform 0.7s cubic-bezier(0.22,1,0.36,1)}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+@media(max-width:600px){
+  .header-title{letter-spacing:12px}
+  body{padding:40px 16px 80px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="scan"></div>
+<div class="grain"></div>
+<div class="grid-bg"></div>
+<div class="vignette"></div>
+
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<div class="wrap">
+
+  <a href="/dashboard" class="top-dashboard-btn">Back To Dashboard</a>
+
+  <header class="page-header">
+    <div class="header-pre">// DUNGEON ARENA · ELITE TERMINAL · SESSION ACTIVE</div>
+    <h1 class="header-title">ARENA</h1>
+    <div class="header-sub">
+      Combat Status: <b>{{ role }}</b> &nbsp;·&nbsp; Terminal v3.0 &nbsp;·&nbsp; System Secure
+    </div>
+    <div class="role-badge">
+      <span class="role-badge-dot"></span>
+      OPERATOR: {{ role }} · CLEARANCE LEVEL ALPHA
+      <span class="role-badge-dot"></span>
+    </div>
+  </header>
+
+  <h2 class="sec-title reveal">Terminal Metrics <span class="sec-num">01</span></h2>
+  <div class="stats-grid reveal">
+
+    <div class="stat-card" style="--card-accent:var(--cyan)">
+      <div class="s-label">EXP Data</div>
+      <div class="s-val" style="color:var(--cyan)" id="xpVal">{{ player.xp }}</div>
+      <div class="s-bar"><div class="s-bar-fill" data-w="72"></div></div>
+      <div class="s-change">↑ ACTIVE SESSION DATA</div>
+    </div>
+
+    <div class="stat-card" style="--card-accent:var(--gold)">
+      <div class="s-label">Power Credits</div>
+      <div class="s-val" style="color:var(--gold)" id="ptVal">{{ player.points }}</div>
+      <div class="s-bar"><div class="s-bar-fill" style="background:var(--gold);box-shadow:0 0 8px var(--gold)" data-w="58"></div></div>
+      <div class="s-change">BALANCE AVAILABLE</div>
+    </div>
+
+    <div class="stat-card" style="--card-accent:#ef4444">
+      <div class="s-label">Striking Power</div>
+      <div class="s-val" style="color:#ef4444" id="atkVal">{{ player.attack }}</div>
+      <div class="s-bar"><div class="s-bar-fill" style="background:#ef4444;box-shadow:0 0 8px #ef4444" data-w="45"></div></div>
+      <div class="s-change">AUGMENT AVAILABLE</div>
+    </div>
+
+    <div class="stat-card" style="--card-accent:#3a86ff">
+      <div class="s-label">Armor Integrity</div>
+      <div class="s-val" style="color:#3a86ff" id="defVal">{{ player.defense }}</div>
+      <div class="s-bar"><div class="s-bar-fill" style="background:#3a86ff;box-shadow:0 0 8px #3a86ff" data-w="60"></div></div>
+      <div class="s-change">SHIELD ONLINE</div>
+    </div>
+
+    <div class="stat-card" style="--card-accent:var(--green)">
+      <div class="s-label">Bonus Yield</div>
+      <div class="s-val" style="color:var(--green)" id="bonusVal">+{{ player.xp_bonus }}</div>
+      <div class="s-bar"><div class="s-bar-fill" style="background:var(--green);box-shadow:0 0 8px var(--green)" data-w="40"></div></div>
+      <div class="s-change">XP LINK STABLE</div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title reveal">Arsenal Modification <span class="sec-num">02</span></h2>
+  <div class="two-col reveal">
+
+    <div class="arsenal-grid">
+
+      <div class="upgrade-card">
+        <div class="uc-title" style="color:var(--gold)">⚔ Attack Augment</div>
+        <div class="uc-rows">
+          <div class="uc-row">Current Damage<b>{{ player.attack }}</b></div>
+          <div class="uc-row">Upgrade Level<b>{{ player.attack_level }}</b></div>
+          <div class="uc-row">Next Cost<b style="color:var(--gold)">{{ attack_cost }} Credits</b></div>
+        </div>
+        {% if player.points >= attack_cost %}
+          <a href="/upgrade/attack?role={{ role }}">
+            <button class="act-btn btn-attack" type="button"> Initialize Upgrade</button>
+          </a>
+        {% else %}
+          <button class="act-btn" disabled>🔒 Insufficient Credits</button>
+        {% endif %}
+      </div>
+
+      <div class="upgrade-card">
+        <div class="uc-title" style="color:var(--cyan)">◈ Data Link — XP Boost</div>
+        <div class="uc-rows">
+          <div class="uc-row">Bonus Yield<b>+{{ player.xp_bonus }}</b></div>
+          <div class="uc-row">Upgrade Level<b>{{ player.xp_bonus_level }}</b></div>
+          <div class="uc-row">Next Cost<b style="color:var(--cyan)">{{ xp_bonus_cost }} Credits</b></div>
+        </div>
+        {% if player.points >= xp_bonus_cost %}
+          <a href="/upgrade/xp_bonus?role={{ role }}">
+            <button class="act-btn btn-xp" type="button"> Initialize Upgrade</button>
+          </a>
+        {% else %}
+          <button class="act-btn" disabled>🔒 Insufficient Credits</button>
+        {% endif %}
+      </div>
+
+      <div class="upgrade-card">
+        <div class="uc-title" style="color:#3a86ff">🛡 Shield Matrix</div>
+        <div class="uc-rows">
+          <div class="uc-row">Defense<b>{{ player.defense }}</b></div>
+          <div class="uc-row">Upgrade Level<b>{{ player.defense_level }}</b></div>
+          <div class="uc-row">Next Cost<b style="color:#3a86ff">{{ defense_cost }} Credits</b></div>
+        </div>
+        {% if player.points >= defense_cost %}
+          <a href="/upgrade/defense?role={{ role }}">
+            <button class="act-btn btn-def" type="button"> Initialize Upgrade</button>
+          </a>
+        {% else %}
+          <button class="act-btn" disabled>🔒 Insufficient Credits</button>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <div class="radar-card">
+      <div class="radar-title">Combat Profile</div>
+      <div class="radar-sub">// NEURAL SCAN ACTIVE</div>
+      <canvas id="radarCanvas" width="280" height="280"></canvas>
+      <div class="radar-legend">
+        <div class="rl-item"><span style="display:flex;align-items:center"><span class="rl-dot" style="background:var(--cyan)"></span>Experience</span><span class="rl-val">{{ player.xp }}</span></div>
+        <div class="rl-item"><span style="display:flex;align-items:center"><span class="rl-dot" style="background:var(--gold)"></span>Credits</span><span class="rl-val">{{ player.points }}</span></div>
+        <div class="rl-item"><span style="display:flex;align-items:center"><span class="rl-dot" style="background:#ef4444"></span>Attack</span><span class="rl-val">{{ player.attack }}</span></div>
+        <div class="rl-item"><span style="display:flex;align-items:center"><span class="rl-dot" style="background:#3a86ff"></span>Defense</span><span class="rl-val">{{ player.defense }}</span></div>
+        <div class="rl-item"><span style="display:flex;align-items:center"><span class="rl-dot" style="background:var(--green)"></span>XP Bonus</span><span class="rl-val">+{{ player.xp_bonus }}</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <h2 class="sec-title reveal">Active Mission Zones <span class="sec-num">03</span></h2>
+  <div class="missions-grid reveal">
+
+    <div class="stage-card">
+      <div class="sc-num">SECTOR 01</div>
+      <h3 class="sc-title">Stage 1 - HR Guardian</h3>
+      <div class="sc-sub">// FACE THE FIRST GUARDIAN AND PROVE YOUR READINESS</div>
+      <div class="diff-row">
+        {% if progress.stage1_easy %}
+          <a href="/game?stage=1&difficulty=easy&role={{ role }}" class="diff-btn easy">Easy</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage1_medium %}
+          <a href="/game?stage=1&difficulty=medium&role={{ role }}" class="diff-btn medium">Medium</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage1_hard %}
+          <a href="/game?stage=1&difficulty=hard&role={{ role }}" class="diff-btn hard">Hard</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stage-card">
+      <div class="sc-num">SECTOR 02</div>
+      <h3 class="sc-title">Stage 2 - Coding Sentinel</h3>
+      <div class="sc-sub">// SHARPEN LOGIC AND TECHNICAL THINKING AGAINST THE SENTINEL</div>
+      <div class="diff-row">
+        {% if progress.stage2_easy %}
+          <a href="/game?stage=2&difficulty=easy&role={{ role }}" class="diff-btn easy">Easy</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage2_medium %}
+          <a href="/game?stage=2&difficulty=medium&role={{ role }}" class="diff-btn medium">Medium</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage2_hard %}
+          <a href="/game?stage=2&difficulty=hard&role={{ role }}" class="diff-btn hard">Hard</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stage-card">
+      <div class="sc-num">SECTOR 03</div>
+      <h3 class="sc-title">Stage 3 - Logic Warden</h3>
+      <div class="sc-sub">// CHALLENGE DEEPER REASONING AND STRUCTURED THINKING</div>
+      <div class="diff-row">
+        {% if progress.stage3_easy %}
+          <a href="/game?stage=3&difficulty=easy&role={{ role }}" class="diff-btn easy">Easy</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage3_medium %}
+          <a href="/game?stage=3&difficulty=medium&role={{ role }}" class="diff-btn medium">Medium</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage3_hard %}
+          <a href="/game?stage=3&difficulty=hard&role={{ role }}" class="diff-btn hard">Hard</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stage-card">
+      <div class="sc-num">SECTOR 04</div>
+      <h3 class="sc-title">Stage 4 - Algorithm Knight</h3>
+      <div class="sc-sub">// ADVANCE INTO STRONGER ANALYTICAL AND PROBLEM-SOLVING BATTLES</div>
+      <div class="diff-row">
+        {% if progress.stage4_easy %}
+          <a href="/game?stage=4&difficulty=easy&role={{ role }}" class="diff-btn easy">Easy</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage4_medium %}
+          <a href="/game?stage=4&difficulty=medium&role={{ role }}" class="diff-btn medium">Medium</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage4_hard %}
+          <a href="/game?stage=4&difficulty=hard&role={{ role }}" class="diff-btn hard">Hard</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="stage-card">
+      <div class="sc-num">SECTOR 05</div>
+      <h3 class="sc-title">Stage 5 - System Architect</h3>
+      <div class="sc-sub">// THE FINAL CHALLENGE OF STRUCTURE, SYSTEM THINKING, AND MASTERY</div>
+      <div class="diff-row">
+        {% if progress.stage5_easy %}
+          <a href="/game?stage=5&difficulty=easy&role={{ role }}" class="diff-btn easy">Easy</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage5_medium %}
+          <a href="/game?stage=5&difficulty=medium&role={{ role }}" class="diff-btn medium">Medium</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+
+        {% if progress.stage5_hard %}
+          <a href="/game?stage=5&difficulty=hard&role={{ role }}" class="diff-btn hard">Hard</a>
+        {% else %}
+          <div class="diff-btn locked">Locked</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">TERMINAL v3.0 · SYSTEM SECURE · DATA ENCRYPTED · ALL SECTORS MONITORED</div>
+
+</div>
+
+<div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
+
+<script>
+const bgC=document.getElementById('bgCanvas'),bgX=bgC.getContext('2d');
+let W,H;
+function resize(){W=bgC.width=innerWidth;H=bgC.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+
+const rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const ORBS=[
+  {xf:0.12,yf:0.2,spd:0.00013,sz:0.65,c:[76,201,240]},
+  {xf:0.88,yf:0.75,spd:0.00010,sz:0.58,c:[255,209,102]},
+  {xf:0.50,yf:0.50,spd:0.00008,sz:0.48,c:[76,201,240]},
+  {xf:0.20,yf:0.85,spd:0.00012,sz:0.36,c:[255,209,102]},
+];
+function drawBg(ts){
+  bgX.clearRect(0,0,W,H);
+  bgX.fillStyle='#04040a';bgX.fillRect(0,0,W,H);
+  ORBS.forEach((o,i)=>{
+    const ox=(o.xf+0.28*Math.sin(ts*o.spd+i*1.5))*W;
+    const oy=(o.yf+0.22*Math.cos(ts*o.spd*0.7+i*2.1))*H;
+    const r=Math.min(W,H)*o.sz;
+    const g=bgX.createRadialGradient(ox,oy,0,ox,oy,r);
+    g.addColorStop(0,rgb(o.c,0.1));g.addColorStop(0.5,rgb(o.c,0.04));g.addColorStop(1,rgb(o.c,0));
+    bgX.fillStyle=g;bgX.beginPath();bgX.arc(ox,oy,r,0,Math.PI*2);bgX.fill();
+  });
+}
+function drawRing(ts){
+  const cx=W/2,cy=H*0.38,r=Math.min(W,H)*0.42;
+  bgX.beginPath();bgX.arc(cx,cy,r,0,Math.PI*2);
+  bgX.strokeStyle='rgba(76,201,240,0.04)';bgX.lineWidth=1;bgX.stroke();
+  const a=ts*0.0004;
+  const dx=cx+Math.cos(a)*r,dy=cy+Math.sin(a)*r;
+  bgX.beginPath();bgX.arc(dx,dy,4,0,Math.PI*2);
+  bgX.fillStyle='rgba(76,201,240,0.6)';bgX.shadowBlur=20;bgX.shadowColor='#4cc9f0';
+  bgX.fill();bgX.shadowBlur=0;
+
+  const r2=Math.min(W,H)*0.32;
+  bgX.beginPath();bgX.arc(cx,cy,r2,0,Math.PI*2);
+  bgX.strokeStyle='rgba(255,209,102,0.03)';bgX.lineWidth=1;bgX.stroke();
+  const a2=-ts*0.00025;
+  const dx2=cx+Math.cos(a2)*r2,dy2=cy+Math.sin(a2)*r2;
+  bgX.beginPath();bgX.arc(dx2,dy2,3,0,Math.PI*2);
+  bgX.fillStyle='rgba(255,209,102,0.55)';bgX.shadowBlur=16;bgX.shadowColor='#ffd166';
+  bgX.fill();bgX.shadowBlur=0;
+}
+function loop(ts){drawBg(ts);drawRing(ts);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+/* radar with actual Jinja values */
+(function drawRadar(){
+  const canvas=document.getElementById('radarCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const cx=W/2,cy=H/2,R=Math.min(W,H)*0.38;
+
+  const xp={{ player.xp|int }};
+  const pts={{ player.points|int }};
+  const atk={{ player.attack|int }};
+  const def={{ player.defense|int }};
+  const bonus={{ player.xp_bonus|int }};
+
+  const maxVal=Math.max(xp,pts,atk,def,bonus,100);
+  const vals=[xp/maxVal,pts/maxVal,atk/maxVal,def/maxVal,bonus/maxVal];
+  const labels=['EXP','CREDITS','ATTACK','DEFENSE','BONUS'];
+  const cols=['#4cc9f0','#ffd166','#ef4444','#3a86ff','#06d6a0'];
+  const N=vals.length;
+
+  function ptAt(angle,r){return[cx+Math.cos(angle-Math.PI/2)*r,cy+Math.sin(angle-Math.PI/2)*r]}
+
+  ctx.clearRect(0,0,W,H);
+
+  for(let r=1;r<=4;r++){
+    ctx.beginPath();
+    for(let i=0;i<N;i++){
+      const a=(Math.PI*2/N)*i;
+      const [x,y]=ptAt(a,R*r/4);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle=`rgba(76,201,240,${r===4?0.12:0.05})`;ctx.lineWidth=1;ctx.stroke();
+  }
+
+  for(let i=0;i<N;i++){
+    const a=(Math.PI*2/N)*i;
+    const [x,y]=ptAt(a,R);
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(x,y);
+    ctx.strokeStyle='rgba(76,201,240,0.08)';ctx.lineWidth=1;ctx.stroke();
+
+    const lx=cx+(R+22)*Math.cos(a-Math.PI/2);
+    const ly=cy+(R+22)*Math.sin(a-Math.PI/2);
+    ctx.font='bold 9px Share Tech Mono, monospace';
+    ctx.fillStyle='rgba(76,201,240,0.5)';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(labels[i],lx,ly);
+  }
+
+  ctx.beginPath();
+  vals.forEach((v,i)=>{
+    const a=(Math.PI*2/N)*i;
+    const [x,y]=ptAt(a,R*v);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  });
+  ctx.closePath();
+  const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+  grad.addColorStop(0,'rgba(76,201,240,0.25)');
+  grad.addColorStop(1,'rgba(76,201,240,0.04)');
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle='rgba(76,201,240,0.6)';ctx.lineWidth=1.5;ctx.stroke();
+
+  vals.forEach((v,i)=>{
+    const a=(Math.PI*2/N)*i;
+    const [x,y]=ptAt(a,R*v);
+    ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);
+    ctx.fillStyle=cols[i];ctx.shadowBlur=12;ctx.shadowColor=cols[i];ctx.fill();ctx.shadowBlur=0;
+  });
+})();
+
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-ring');
+let mx=-200,my=-200,rx=-200,ry=-200;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function cl(){cur.style.left=mx+'px';cur.style.top=my+'px';rx+=(mx-rx)*0.11;ry+=(my-ry)*0.11;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(cl)})();
+
+const TRAIL_N=18;
+const trails=Array.from({length:TRAIL_N},()=>{const d=document.createElement('div');d.className='trail';document.body.appendChild(d);return{el:d,x:0,y:0}});
+(function tl(){let x=mx,y=my;trails.forEach((t,i)=>{t.x+=(x-t.x)*0.12;t.y+=(y-t.y)*0.12;const s=(TRAIL_N-i)/TRAIL_N*0.6;t.el.style.cssText=`left:${t.x}px;top:${t.y}px;width:5px;height:5px;background:rgba(76,201,240,${s*0.6});box-shadow:0 0 ${s*8}px rgba(76,201,240,0.4);transform:translate(-50%,-50%) scale(${s});opacity:${s*0.7};border-radius:50%;filter:blur(2px);`;x=t.x;y=t.y});requestAnimationFrame(tl)})();
+
+document.querySelectorAll('a,button,.diff-btn').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{curR.style.width='50px';curR.style.height='50px';curR.style.opacity='0.7'});
+  el.addEventListener('mouseleave',()=>{curR.style.width='34px';curR.style.height='34px';curR.style.opacity='0.45'});
+});
+
+window.addEventListener('load',()=>{
+  document.querySelectorAll('.s-bar-fill').forEach(el=>{
+    el.style.width=el.dataset.w+'%';
+  });
+});
+
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}});
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+const TICKS=[
+  ['ARENA','ACTIVE'],
+  ['ROLE','{{ role }}'],
+  ['XP','{{ player.xp }}'],
+  ['CREDITS','{{ player.points }}'],
+  ['ATTACK','{{ player.attack }}'],
+  ['DEFENSE','{{ player.defense }}'],
+  ['BONUS','+{{ player.xp_bonus }}'],
+  ['SYSTEM','SECURE']
+];
+const tk=document.getElementById('ticker');
+tk.innerHTML=[...TICKS,...TICKS].map(([k,v])=>
+  `<div class="tick-i">${k}&nbsp;<span>${v}</span></div><div class="tick-i" style="color:#0a0a18;font-size:0.4rem">◆</div>`
+).join('');
+
+function countUp(el,target,delay=0,prefix=''){
+  if(!el||isNaN(target))return;
+  setTimeout(()=>{
+    let cur=0;const step=target/60;
+    const iv=setInterval(()=>{
+      cur+=step;
+      if(cur>=target){cur=target;clearInterval(iv)}
+      el.textContent=prefix + Math.floor(cur);
+    },22);
+  },delay);
+}
+const xpEl=document.getElementById('xpVal');
+const ptEl=document.getElementById('ptVal');
+const atkEl=document.getElementById('atkVal');
+const defEl=document.getElementById('defVal');
+const bonusEl=document.getElementById('bonusVal');
+
+const xpN=parseInt(xpEl?.textContent)||0;
+const ptN=parseInt(ptEl?.textContent)||0;
+const atkN=parseInt(atkEl?.textContent)||0;
+const defN=parseInt(defEl?.textContent)||0;
+const bonusN=parseInt((bonusEl?.textContent || '').replace('+',''))||0;
+
+if(xpEl)xpEl.textContent='0';
+if(ptEl)ptEl.textContent='0';
+if(atkEl)atkEl.textContent='0';
+if(defEl)defEl.textContent='0';
+if(bonusEl)bonusEl.textContent='+0';
+
+setTimeout(()=>{
+  countUp(xpEl,xpN,0);
+  countUp(ptEl,ptN,200);
+  countUp(atkEl,atkN,400);
+  countUp(defEl,defN,600);
+  countUp(bonusEl,bonusN,800,'+');
+},400);
+</script>
+</body>
+</html>
