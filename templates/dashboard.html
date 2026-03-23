@@ -230,6 +230,12 @@ select option{background:#0a1020;color:var(--txt)}
   .brand{font-size:3.2rem}
   .info-grid,.action-grid{grid-template-columns:1fr}
 }
+
+.logout-btn {
+    grid-column: span 2;
+    text-align: center;
+}
+
 </style>
 </head>
 <body>
@@ -368,8 +374,7 @@ select option{background:#0a1020;color:var(--txt)}
     <div class="action-grid">
       <a href="/interview" class="btn-ghost">Start Interview ↗</a>
       <a href="/add-credits" class="btn-ghost">Add 5 Credits ↗</a>
-      <a href="/game_dashboard?role={{ role }}" class="btn-ghost">Enter Dungeon Arena ↗</a>
-      <a href="/logout" class="btn-ghost ">Log Out ↗</a>
+      <a href="/logout" class="btn-ghost logout-btn">Log Out ↗</a>
     </div>
   </main>
 
