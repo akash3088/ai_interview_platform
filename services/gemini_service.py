@@ -139,16 +139,19 @@ Feedback: <detailed feedback>
 Next Question: <next question>
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={
-            "max_output_tokens": 1000,
-            "temperature": 0.6,
-        }
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config={
+                "max_output_tokens": 1000,
+                "temperature": 0.6,
+            }
+        )
+        return response.text
 
-    return response.text
+    except Exception as e:
+        return f"GEMINI ERROR: {str(e)}"
 
 
 
@@ -190,13 +193,18 @@ Weaknesses: <candidate weaknesses>
 Overall Feedback: <overall final feedback>
 """
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={
-            "max_output_tokens": 1000,
-            "temperature": 0.6,
-        }
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config={
+                "max_output_tokens": 1000,
+                "temperature": 0.6,
+            }
+        )
+        return response.text
+
+    except Exception as e:
+        return f"GEMINI ERROR: {str(e)}"
 
     return response.text
