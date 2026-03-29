@@ -4,3 +4,5 @@ mysql-connector-python
 python-dotenv
 Werkzeug
 google-genai
+PyPDF2
+python-docx

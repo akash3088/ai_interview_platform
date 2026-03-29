@@ -3,285 +3,703 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analysis Complete | Premium Neural Link</title>
-    
+    <title>Interview Intelligence Report</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-dark: #020617;
-            --card-bg: rgba(15, 23, 42, 0.6);
-            --primary: #38bdf8;
-            --accent: #818cf8;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --glow: rgba(56, 189, 248, 0.4);
+            --ink: #1a1208;
+            --ink-mid: #4a3f2f;
+            --ink-light: #8a7d6a;
+            --parchment: #f5f0e8;
+            --cream: #faf7f2;
+            --warm-white: #fffef9;
+            --gold: #c8922a;
+            --gold-light: #e8b84b;
+            --gold-pale: #f5e9c8;
+            --red: #c0392b;
+            --green: #2d7a4f;
+            --border: rgba(26, 18, 8, 0.12);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: var(--bg-dark);
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.15) 0px, transparent 50%);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: var(--text-main);
-            overflow: hidden;
-        }
-
-        .summary-card {
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 60px 40px;
-            border-radius: 40px;
-            width: 90%;
-            max-width: 480px;
-            text-align: center;
+            background: var(--cream);
+            color: var(--ink);
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 400;
+            min-height: 100vh;
+            padding: 0;
             position: relative;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.7);
-            animation: cardAppear 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-x: hidden;
         }
 
-        @keyframes cardAppear {
-            from { opacity: 0; transform: translateY(30px) scale(0.95); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+        /* Subtle paper texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
         }
 
-        h2 {
-            font-size: 2.4rem;
-            font-weight: 800;
-            letter-spacing: -1px;
-            margin-bottom: 12px;
-            background: linear-gradient(to right, #fff, var(--text-dim));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .status-msg {
-            color: var(--text-dim);
-            font-size: 1rem;
-            line-height: 1.6;
-            margin-bottom: 40px;
-            max-width: 320px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .score-wrapper {
+        .page {
             position: relative;
-            width: 180px;
-            height: 180px;
-            margin: 0 auto 40px;
+            z-index: 1;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 60px 32px;
+        }
+
+        /* ── MASTHEAD ── */
+        .masthead {
             display: flex;
-            justify-content: center;
-            align-items: center;
+            align-items: flex-start;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--ink);
+            padding-bottom: 20px;
+            margin-bottom: 48px;
+            gap: 20px;
+            flex-wrap: wrap;
         }
 
-        .score-circle-svg {
-            position: absolute;
-            transform: rotate(-90deg);
-        }
-
-        .circle-bg {
-            fill: none;
-            stroke: rgba(255, 255, 255, 0.05);
-            stroke-width: 10;
-        }
-
-        .circle-progress {
-            fill: none;
-            stroke: url(#scoreGradient);
-            stroke-width: 10;
-            stroke-linecap: round;
-            stroke-dasharray: 440;
-            stroke-dashoffset: 132; /* Calculation: 440 - (440 * score/10) */
-            animation: progressAnim 1.5s ease-out forwards;
-        }
-        
-        .reward-box {
-            margin-top: 18px;
-            display: inline-flex;
+        .masthead-left {
+            display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 12px 22px;
-            border-radius: 14px;
-            background: rgba(0, 240, 255, 0.08);
-            border: 1px solid rgba(0, 240, 255, 0.25);
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.12);
+            gap: 6px;
         }
 
-        .reward-label {
-            font-size: 13px;
-            color: #aaa;
-            letter-spacing: 1px;
+        .publication-tag {
+            font-size: 0.72rem;
+            letter-spacing: 0.22em;
             text-transform: uppercase;
-        }
-
-        .reward-value {
-            font-size: 26px;
-            font-weight: 700;
-            color: #00f0ff;
-            margin-top: 4px;
-        }
-
-
-        @keyframes progressAnim {
-            from { stroke-dashoffset: 440; }
-        }
-
-        .score-content {
-            z-index: 2;
-            text-align: center;
-        }
-
-        .score-value {
-            font-size: 3.5rem;
-            font-weight: 800;
-            color: #fff;
-            display: block;
-            line-height: 1;
-            text-shadow: 0 0 20px var(--glow);
-        }
-
-        .score-max {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            color: var(--ink-light);
             font-weight: 600;
         }
 
-        .btn-dashboard {
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+        }
+
+        .masthead-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .date-stamp {
+            font-size: 0.78rem;
+            color: var(--ink-light);
+            letter-spacing: 0.08em;
+        }
+
+        .verdict-badge {
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 18px 30px;
-            background: #fff;
-            color: #020617;
-            text-decoration: none;
-            border-radius: 18px;
-            font-weight: 700;
-            font-size: 1rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            border: 1.5px solid var(--gold);
+            color: var(--gold);
+            background: var(--gold-pale);
         }
 
-        .btn-dashboard:hover {
-            transform: translateY(-4px);
-            background: var(--primary);
-            color: #fff;
-            box-shadow: 0 15px 30px var(--glow);
+        .verdict-badge::before {
+            content: '●';
+            font-size: 0.55rem;
         }
 
-                .feedback-box {
-            margin-top: 30px;
-            text-align: left;
-            padding: 22px;
-            border-radius: 22px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        /* ── HERO HEADLINE ── */
+        .hero {
+            margin-bottom: 52px;
         }
 
-        .feedback-title {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 14px;
-            text-align: center;
-        }
-
-        .feedback-item {
+        .role-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--gold);
             margin-bottom: 16px;
-        }
-
-        .feedback-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .feedback-label {
             display: block;
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #ffffff;
+        }
+
+        .headline {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            line-height: 1.08;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+            margin-bottom: 22px;
+            max-width: 700px;
+        }
+
+        .headline em {
+            font-style: italic;
+            color: var(--gold);
+        }
+
+        .subhead {
+            font-size: 1.02rem;
+            line-height: 1.75;
+            color: var(--ink-mid);
+            max-width: 620px;
+            font-weight: 300;
+        }
+
+        /* ── SCORE STRIP ── */
+        .score-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border: 1.5px solid var(--ink);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 52px;
+        }
+
+        .score-cell {
+            padding: 22px 20px;
+            border-right: 1px solid var(--border);
+            position: relative;
+            background: var(--warm-white);
+            transition: background 0.2s;
+        }
+
+        .score-cell:last-child { border-right: none; }
+
+        .score-cell:hover { background: var(--gold-pale); }
+
+        .score-cell::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 3px;
+            background: var(--gold);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .score-cell:hover::after { transform: scaleX(1); }
+
+        .cell-label {
+            font-size: 0.68rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--ink-light);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .cell-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.4rem;
+            line-height: 1;
+            color: var(--ink);
             margin-bottom: 6px;
         }
 
-        .feedback-text {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: var(--text-dim);
+        .cell-unit {
+            font-size: 1.1rem;
+            color: var(--ink-light);
+            font-weight: 300;
         }
-        
+
+        .cell-desc {
+            font-size: 0.82rem;
+            color: var(--ink-light);
+            line-height: 1.5;
+            margin-top: 4px;
+        }
+
+        /* ── TWO-COLUMN BODY ── */
+        .body-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 48px;
+            align-items: start;
+        }
+
+        /* ── FEEDBACK SECTION ── */
+        .section-label {
+            font-size: 0.7rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--ink-light);
+            font-weight: 600;
+            border-top: 2px solid var(--ink);
+            padding-top: 14px;
+            margin-bottom: 28px;
+        }
+
+        .feedback-block {
+            margin-bottom: 32px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .feedback-block:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .fb-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.18rem;
+            color: var(--ink);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fb-heading .fb-icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .icon-strength { background: #d4edda; color: var(--green); }
+        .icon-weak    { background: #fde8e8; color: var(--red); }
+        .icon-info    { background: var(--gold-pale); color: var(--gold); }
+
+        .fb-body {
+            font-size: 0.96rem;
+            line-height: 1.8;
+            color: var(--ink-mid);
+            padding-left: 32px;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar { display: flex; flex-direction: column; gap: 28px; }
+
+        .sidebar-block {
+            background: var(--warm-white);
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            padding: 22px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-block::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--gold);
+        }
+
+        .sb-title {
+            font-size: 0.68rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--ink-light);
+            font-weight: 600;
+            margin-bottom: 14px;
+            padding-left: 2px;
+        }
+
+        .signal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .signal-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .signal-key {
+            font-size: 0.7rem;
+            color: var(--ink-light);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        .signal-val {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.12rem;
+            color: var(--ink);
+        }
+
+        .confidence-bar-wrap {
+            margin-top: 16px;
+        }
+
+        .bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .bar-label span:first-child {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--ink-light);
+            font-weight: 600;
+        }
+
+        .bar-label span:last-child {
+            font-family: 'DM Serif Display', serif;
+            font-size: 0.95rem;
+            color: var(--ink);
+        }
+
+        .bar-track {
+            height: 6px;
+            background: var(--parchment);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 100%);
+            border-radius: 3px;
+            transform-origin: left;
+            animation: fillBar 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            transform: scaleX(0);
+        }
+
+        @keyframes fillBar {
+            to { transform: scaleX(1); }
+        }
+
+        .hire-meter {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hire-num {
+            font-family: 'DM Serif Display', serif;
+            font-size: 3rem;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+        .hire-desc {
+            font-size: 0.85rem;
+            color: var(--ink-light);
+            line-height: 1.55;
+        }
+
+        /* ── ACTIONS ── */
+        .action-bar {
+            margin-top: 52px;
+            padding-top: 28px;
+            border-top: 2px solid var(--ink);
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 24px;
+            border-radius: 4px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            transition: all 0.22s ease;
+        }
+
+        .btn-primary {
+            background: var(--ink);
+            color: var(--warm-white);
+        }
+
+        .btn-primary:hover {
+            background: var(--gold);
+            color: var(--ink);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(200, 146, 42, 0.3);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--ink);
+            border: 1.5px solid var(--border);
+        }
+
+        .btn-ghost:hover {
+            border-color: var(--ink);
+            background: var(--parchment);
+        }
+
+        /* ── FOOTER BAR ── */
+        .footer-note {
+            margin-top: 40px;
+            font-size: 0.75rem;
+            color: var(--ink-light);
+            letter-spacing: 0.06em;
+            text-align: center;
+            padding: 20px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ── ENTER ANIMATION ── */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(18px);
+            animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .fade-in:nth-child(1) { animation-delay: 0.05s; }
+        .fade-in:nth-child(2) { animation-delay: 0.15s; }
+        .fade-in:nth-child(3) { animation-delay: 0.25s; }
+        .fade-in:nth-child(4) { animation-delay: 0.35s; }
+        .fade-in:nth-child(5) { animation-delay: 0.45s; }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 800px) {
+            .body-grid { grid-template-columns: 1fr; }
+            .score-strip { grid-template-columns: 1fr 1fr; }
+            .score-cell:nth-child(2) { border-right: none; }
+            .score-cell:nth-child(3) { border-top: 1px solid var(--border); }
+            .score-cell:nth-child(4) { border-top: 1px solid var(--border); }
+        }
+
+        @media (max-width: 500px) {
+            .page { padding: 36px 20px; }
+            .score-strip { grid-template-columns: 1fr; }
+            .score-cell { border-right: none; border-bottom: 1px solid var(--border); }
+            .headline { font-size: 2rem; }
+        }
+
+        @media print {
+            .action-bar { display: none; }
+            .bar-fill { animation: none; transform: scaleX(var(--fill, 1)); }
+            body { background: #fff; }
+        }
     </style>
 </head>
 <body>
+<div class="page">
 
-    <div class="summary-card">
-        <h2>Analysis Ready</h2>
-        <p class="status-msg">Assessment complete. Your performance metrics have been synced with your profile.</p>
-        <div class="reward-box">
-                    <span class="reward-label">Credits Earned</span>
-                    <span class="reward-value">+{{ reward_credits }}</span>
-                </div>
-        <div class="score-wrapper">
-            <svg class="score-circle-svg" width="180" height="180">
-                <defs>
-                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#38bdf8" />
-                        <stop offset="100%" stop-color="#818cf8" />
-                    </linearGradient>
-                </defs>
-                <circle class="circle-bg" cx="90" cy="90" r="75"></circle>
-                <circle class="circle-progress" cx="90" cy="90" r="75"></circle>
-            </svg>
-            
-            <div class="score-content">
-                <span class="score-value">{{ "%.1f"|format(average_score) }}</span>
-                <span class="score-max">/ 10</span>
-
-            </div>
-            
+    <!-- MASTHEAD -->
+    <div class="masthead fade-in">
+        <div class="masthead-left">
+            <span class="publication-tag">Candidate Evaluation</span>
+            <div class="logo">Interview Intelligence</div>
         </div>
-
-        <div class="feedback-box">
-            <div class="feedback-title">Interview Feedback</div>
-
-            <div class="feedback-item">
-                <span class="feedback-label">Strengths</span>
-                <div class="feedback-text">{{ strengths }}</div>
-            </div>
-
-            <div class="feedback-item">
-                <span class="feedback-label">Weaknesses</span>
-                <div class="feedback-text">{{ weaknesses }}</div>
-            </div>
-
-            <div class="feedback-item">
-                <span class="feedback-label">Overall Feedback</span>
-                <div class="feedback-text">{{ overall_feedback }}</div>
-            </div>
+        <div class="masthead-right">
+            <span class="date-stamp">{{ date | default("March 25, 2026") }}</span>
+            <span class="verdict-badge">{{ decision_label }}</span>
         </div>
-
-        <a href="/dashboard" class="btn-dashboard">
-            Open Dashboard
-        </a>
     </div>
 
+    <!-- HERO -->
+    <div class="hero fade-in">
+        <span class="role-tag">Position — {{ role }}</span>
+        <h1 class="headline">
+            Full-spectrum readiness<br>
+            <em>assessment complete.</em>
+        </h1>
+        <p class="subhead">
+            This report integrates aptitude performance, AI-evaluated interview quality,
+            and real-time behavioral confidence signals into a single candidate readiness summary.
+        </p>
+    </div>
+
+    <!-- SCORE STRIP -->
+    <div class="score-strip fade-in">
+        <div class="score-cell">
+            <div class="cell-label">Interview Score</div>
+            <div class="cell-number">{{ "%.1f"|format(average_score) }}<span class="cell-unit">/10</span></div>
+            <div class="cell-desc">AI-evaluated interview performance</div>
+        </div>
+        <div class="score-cell">
+            <div class="cell-label">Readiness Score</div>
+            <div class="cell-number">{{ readiness_score }}<span class="cell-unit">%</span></div>
+            <div class="cell-desc">{{ readiness_summary }}</div>
+        </div>
+        <div class="score-cell">
+            <div class="cell-label">Hire Probability</div>
+            <div class="cell-number">{{ hire_probability }}<span class="cell-unit">%</span></div>
+            <div class="cell-desc">{{ decision_note }}</div>
+        </div>
+        <div class="score-cell">
+            <div class="cell-label">Credits Earned</div>
+            <div class="cell-number">+{{ reward_credits }}</div>
+            <div class="cell-desc">Aptitude: {{ aptitude_score }} / {{ aptitude_total }}</div>
+        </div>
+    </div>
+
+    <!-- BODY GRID -->
+    <div class="body-grid fade-in">
+
+        <!-- LEFT: FEEDBACK -->
+        <div class="feedback-col">
+            <div class="section-label">AI Interview Feedback</div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-strength">✓</span>
+                    Strengths
+                </div>
+                <div class="fb-body">{{ strengths }}</div>
+            </div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-weak">!</span>
+                    Areas for Improvement
+                </div>
+                <div class="fb-body">{{ weaknesses }}</div>
+            </div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-info">◈</span>
+                    Overall Feedback
+                </div>
+                <div class="fb-body">{{ overall_feedback }}</div>
+            </div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-info">→</span>
+                    Personalized Improvement Plan
+                </div>
+                <div class="fb-body">{{ improvement_plan }}</div>
+            </div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-info">◉</span>
+                    Emotion + Answer Correlation
+                </div>
+                <div class="fb-body">{{ emotion_correlation }}</div>
+            </div>
+
+            <div class="feedback-block">
+                <div class="fb-heading">
+                    <span class="fb-icon icon-info">▷</span>
+                    Next Simulation Focus
+                </div>
+                <div class="fb-body">{{ next_round_focus }}</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: SIDEBAR -->
+        <div class="sidebar">
+
+            <!-- Hire Probability -->
+            <div class="sidebar-block">
+                <div class="sb-title">Hire Probability</div>
+                <div class="hire-meter">
+                    <div class="hire-num">{{ hire_probability }}%</div>
+                    <div class="confidence-bar-wrap">
+                        <div class="bar-track">
+                            <div class="bar-fill" style="width: {{ hire_probability }}%; animation-delay: 0.6s;"></div>
+                        </div>
+                    </div>
+                    <div class="hire-desc">{{ decision_note }}</div>
+                </div>
+            </div>
+
+            <!-- Behavioral Signals -->
+            <div class="sidebar-block">
+                <div class="sb-title">Behavioral Signal Summary</div>
+                <div class="signal-grid">
+                    <div class="signal-item">
+                        <span class="signal-key">Dominant Emotion</span>
+                        <span class="signal-val">{{ emotion_summary.overall_dominant_emotion }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-key">Dominant State</span>
+                        <span class="signal-val">{{ emotion_summary.overall_dominant_state }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-key">Eye Contact</span>
+                        <span class="signal-val">{{ emotion_summary.overall_eye_contact }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-key">Nervous Qs</span>
+                        <span class="signal-val">{{ emotion_summary.nervous_question_count }}</span>
+                    </div>
+                    <div class="signal-item">
+                        <span class="signal-key">Samples Taken</span>
+                        <span class="signal-val">{{ emotion_summary.total_samples }}</span>
+                    </div>
+                </div>
+
+                <div class="confidence-bar-wrap" style="margin-top: 20px;">
+                    <div class="bar-label">
+                        <span>Avg. Confidence</span>
+                        <span>{{ emotion_summary.average_confidence }}%</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width: {{ emotion_summary.average_confidence }}%; animation-delay: 0.8s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verdict -->
+            <div class="sidebar-block">
+                <div class="sb-title">Final Verdict</div>
+                <div class="signal-item" style="margin-bottom: 10px;">
+                    <span class="signal-key">Decision</span>
+                    <span class="signal-val" style="font-size:1.3rem;">{{ decision_label }}</span>
+                </div>
+                <div class="hire-desc">
+                    Readiness index: <strong>{{ readiness_score }}%</strong> — {{ readiness_summary }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="action-bar fade-in">
+        <a href="/dashboard" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M7 1l6 6-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Open Dashboard
+        </a>
+        <button class="btn btn-ghost" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="4" width="10" height="7" rx="1.2" stroke="currentColor" stroke-width="1.5"/><path d="M4 4V2.5A.5.5 0 0 1 4.5 2h5a.5.5 0 0 1 .5.5V4" stroke="currentColor" stroke-width="1.5"/><path d="M4 10h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Download Report
+        </button>
+    </div>
+
+    <div class="footer-note">
+        Interview Intelligence · Automated candidate evaluation · Confidential
+    </div>
+
+</div>
 </body>
 </html>

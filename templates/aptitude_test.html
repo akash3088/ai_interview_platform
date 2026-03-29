@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aptitude Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+    <style>
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --bg:#eef2ff;
+            --primary:#2c5ee8;
+            --primary2:#1a3fbf;
+            --primary3:#5a82f5;
+            --accent:#6c3fcf;
+            --txt:#1a2a6c;
+            --dimtxt:#4455aa;
+            --dim:#8899cc;
+            --border:rgba(44,94,232,0.18);
+            --card:#ffffff;
+            --glow:rgba(44,94,232,0.35);
+        }
+
+        html{font-size:16px}
+        body{
+            min-height:100vh;
+            background:var(--bg);
+            color:var(--txt);
+            font-family:'Rajdhani',sans-serif;
+            padding:40px 24px 80px;
+            position:relative;
+            cursor:none;
+            overflow-x:hidden;
+        }
+
+        /* ══ CURSOR ══════════════════════════════════════════ */
+        #cur{position:fixed;width:10px;height:10px;border-radius:50%;background:var(--primary);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);box-shadow:0 0 14px var(--primary),0 0 28px var(--glow)}
+        #cur-ring{position:fixed;width:36px;height:36px;border:1.5px solid var(--primary);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%);opacity:0.5;transition:width 0.25s,height 0.25s,opacity 0.25s}
+        .trail{position:fixed;border-radius:50%;pointer-events:none;z-index:9990;transform:translate(-50%,-50%)}
+
+        /* ══ CANVAS ══════════════════════════════════════════ */
+        #bgCanvas{position:fixed;inset:0;z-index:0}
+
+        /* ══ OVERLAYS ════════════════════════════════════════ */
+        .grid-ov{position:fixed;inset:0;z-index:1;pointer-events:none;
+            background-image:linear-gradient(rgba(44,94,232,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(44,94,232,0.05) 1px,transparent 1px);
+            background-size:55px 55px;
+            mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent)}
+        .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+            background:radial-gradient(ellipse 90% 90% at 50% 50%,transparent 30%,rgba(210,220,255,0.55) 100%)}
+
+        /* ══ MAIN CONTENT ════════════════════════════════════ */
+        .page-wrap{position:relative;z-index:5;max-width:860px;margin:0 auto;}
+
+        /* ══ TOPBAR ══════════════════════════════════════════ */
+        .topbar{
+            display:flex;justify-content:space-between;align-items:center;
+            margin-bottom:36px;
+            opacity:0;animation:fadeDown 0.7s 0.2s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes riseUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+        .brand{
+            font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:7px;
+            background:linear-gradient(90deg,#1a2a6c,#2c5ee8,#6c3fcf,#2c5ee8,#1a2a6c);
+            background-size:250% 100%;
+            -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+            animation:shimmer 5s ease-in-out infinite;
+        }
+        @keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+
+        .back-link{
+            font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:4px;
+            text-transform:uppercase;text-decoration:none;color:var(--dimtxt);
+            border:1.5px solid var(--border);padding:9px 18px;border-radius:4px;
+            background:rgba(44,94,232,0.05);transition:all 0.3s;display:flex;align-items:center;gap:6px;
+        }
+        .back-link:hover{border-color:var(--primary);color:var(--primary);background:rgba(44,94,232,0.1);box-shadow:0 0 14px rgba(44,94,232,0.2)}
+
+        /* ══ HEADER ══════════════════════════════════════════ */
+        .page-header{
+            text-align:center;margin-bottom:36px;
+            opacity:0;animation:riseUp 0.8s 0.4s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .header-pre{
+            font-family:'Share Tech Mono',monospace;font-size:0.6rem;letter-spacing:6px;
+            color:var(--dim);text-transform:uppercase;margin-bottom:10px;
+            display:flex;align-items:center;justify-content:center;gap:10px;
+        }
+        .header-pre::before,.header-pre::after{content:'';width:36px;height:1px;background:linear-gradient(90deg,transparent,var(--primary));opacity:0.45}
+        .header-pre::after{transform:scaleX(-1)}
+
+        .page-title{
+            font-family:'Bebas Neue',sans-serif;
+            font-size:clamp(42px,7vw,80px);letter-spacing:12px;line-height:1;
+            background:linear-gradient(135deg,#1a2a6c 0%,#2c5ee8 40%,#6c3fcf 70%,#2c5ee8 100%);
+            -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+            animation:titleGlow 4s ease-in-out infinite alternate;
+        }
+        @keyframes titleGlow{
+            0%{filter:drop-shadow(0 2px 10px rgba(44,94,232,0.25))}
+            100%{filter:drop-shadow(0 4px 30px rgba(44,94,232,0.6)) drop-shadow(0 0 16px rgba(108,63,207,0.3))}
+        }
+
+        /* ══ META CARDS ══════════════════════════════════════ */
+        .meta-bar{
+            display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:32px;
+            opacity:0;animation:riseUp 0.7s 0.6s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+        .meta-card{
+            background:var(--card);border:1.5px solid var(--border);
+            border-radius:10px;padding:12px 20px;text-align:center;
+            box-shadow:0 4px 16px rgba(44,94,232,0.1);min-width:160px;
+        }
+        .meta-label{
+            font-family:'Share Tech Mono',monospace;font-size:0.52rem;
+            letter-spacing:3px;color:var(--dim);text-transform:uppercase;display:block;margin-bottom:4px;
+        }
+        .meta-value{
+            font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:3px;
+            color:var(--primary);display:block;
+        }
+
+        /* ══ FLASH MESSAGES ══════════════════════════════════ */
+        .msg-box{
+            background:rgba(220,30,30,0.08);border:1.5px solid rgba(220,30,30,0.25);
+            border-radius:10px;padding:14px 18px;margin-bottom:24px;
+            font-family:'Share Tech Mono',monospace;font-size:0.65rem;
+            letter-spacing:2px;color:#b02020;
+            opacity:0;animation:riseUp 0.6s 0.5s forwards;
+        }
+        .msg-box::before{content:'⚠ ';font-size:0.7rem}
+
+        /* ══ CONTAINER ════════════════════════════════════════ */
+        .container{
+            opacity:0;animation:riseUp 0.8s 0.7s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
+
+        /* ══ PROGRESS BAR ════════════════════════════════════ */
+        .progress-wrap{margin-bottom:28px}
+        .progress-label{
+            font-family:'Share Tech Mono',monospace;font-size:0.55rem;
+            letter-spacing:3px;color:var(--dim);text-transform:uppercase;
+            display:flex;justify-content:space-between;margin-bottom:8px;
+        }
+        .progress-track{
+            height:4px;background:rgba(44,94,232,0.12);border-radius:4px;overflow:hidden;
+        }
+        .progress-fill{
+            height:100%;width:0%;border-radius:4px;
+            background:linear-gradient(90deg,var(--primary2),var(--primary3));
+            transition:width 0.4s ease;
+        }
+
+        /* ══ QUESTION BOX ════════════════════════════════════ */
+        .question-box{
+            background:var(--card);
+            border:1.5px solid var(--border);
+            border-radius:14px;padding:22px 24px;margin-bottom:18px;
+            box-shadow:0 4px 20px rgba(44,94,232,0.08);
+            transition:border-color 0.3s,box-shadow 0.3s;
+            position:relative;overflow:hidden;
+        }
+        .question-box::before{
+            content:'';position:absolute;top:0;left:0;right:0;height:2px;
+            background:linear-gradient(90deg,transparent,var(--primary),var(--accent),transparent);
+            opacity:0;transition:opacity 0.3s;
+        }
+        .question-box:focus-within{
+            border-color:rgba(44,94,232,0.4);
+            box-shadow:0 6px 28px rgba(44,94,232,0.16);
+        }
+        .question-box:focus-within::before{opacity:0.7}
+
+        .q-num{
+            font-family:'Share Tech Mono',monospace;font-size:0.5rem;letter-spacing:4px;
+            color:var(--dim);text-transform:uppercase;margin-bottom:8px;display:block;
+        }
+        .question-title{
+            font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:600;
+            color:var(--txt);margin-bottom:16px;line-height:1.5;
+        }
+
+        /* ══ OPTIONS ══════════════════════════════════════════ */
+        .option-label{
+            display:flex;align-items:center;gap:12px;
+            padding:11px 14px;margin-bottom:8px;
+            border:1.5px solid rgba(44,94,232,0.1);border-radius:8px;
+            cursor:pointer;transition:all 0.25s;
+            font-family:'Rajdhani',sans-serif;font-size:0.95rem;font-weight:500;color:var(--dimtxt);
+            background:rgba(44,94,232,0.02);
+        }
+        .option-label:hover{
+            border-color:rgba(44,94,232,0.35);
+            background:rgba(44,94,232,0.06);
+            color:var(--txt);
+        }
+        .option-label:has(input:checked){
+            border-color:var(--primary);
+            background:rgba(44,94,232,0.1);
+            color:var(--primary2);
+            box-shadow:0 0 0 3px rgba(44,94,232,0.08);
+        }
+        .option-label input[type="radio"]{
+            appearance:none;-webkit-appearance:none;
+            width:16px;height:16px;border-radius:50%;
+            border:2px solid rgba(44,94,232,0.3);
+            background:#fff;flex-shrink:0;
+            transition:all 0.25s;cursor:pointer;position:relative;
+        }
+        .option-label input[type="radio"]:checked{
+            border-color:var(--primary);
+            background:var(--primary);
+            box-shadow:0 0 0 3px rgba(44,94,232,0.2);
+        }
+        .option-label input[type="radio"]:checked::after{
+            content:'';position:absolute;
+            top:50%;left:50%;transform:translate(-50%,-50%);
+            width:5px;height:5px;border-radius:50%;background:#fff;
+        }
+
+        /* ══ SUBMIT BUTTON ════════════════════════════════════ */
+        .submit-wrap{
+            display:flex;align-items:center;justify-content:space-between;
+            flex-wrap:wrap;gap:16px;margin-top:28px;
+        }
+        .submit-hint{
+            font-family:'Share Tech Mono',monospace;font-size:0.55rem;
+            letter-spacing:3px;color:var(--dim);text-transform:uppercase;
+        }
+        .submit-btn{
+            font-family:'Bebas Neue',sans-serif;font-size:1.15rem;letter-spacing:6px;
+            padding:15px 44px;border:none;border-radius:4px;cursor:none;
+            background:linear-gradient(135deg,var(--primary2),var(--primary),var(--primary3));
+            background-size:200% 100%;
+            color:#fff;font-weight:900;
+            clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+            transition:all 0.4s cubic-bezier(0.22,1,0.36,1);
+            position:relative;overflow:hidden;
+        }
+        .submit-btn::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);transition:left 0.5s}
+        .submit-btn:hover::before{left:140%}
+        .submit-btn:hover{background-position:100% 0;transform:translateY(-3px);box-shadow:0 14px 40px rgba(44,94,232,0.4)}
+        .submit-btn:active{transform:translateY(-1px)}
+
+        /* ══ TICKER ══════════════════════════════════════════ */
+        .ticker-wrap{position:fixed;bottom:0;left:0;right:0;z-index:50;
+            background:rgba(240,244,255,0.97);border-top:1.5px solid rgba(44,94,232,0.14);
+            padding:7px 0;overflow:hidden}
+        .ticker-inner{display:flex;gap:52px;white-space:nowrap;animation:tickRoll 40s linear infinite}
+        @keyframes tickRoll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        .tick-i{font-family:'Share Tech Mono',monospace;font-size:0.52rem;letter-spacing:3px;color:var(--dim);text-transform:uppercase;display:flex;align-items:center;gap:8px}
+        .tick-i span{color:var(--primary);font-weight:700}
+
+        @media(max-width:600px){
+            body{padding:24px 16px 70px}
+            .submit-wrap{flex-direction:column;align-items:stretch}
+            .submit-btn{text-align:center}
+            .meta-card{min-width:120px}
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+<div class="grid-ov"></div>
+<div class="vignette"></div>
+<div id="cur"></div>
+<div id="cur-ring"></div>
+
+<div class="page-wrap">
+
+    <!-- TOPBAR -->
+    <nav class="topbar">
+        <div class="brand">AI Interview Platform</div>
+        <a href="/dashboard" class="back-link">← Dashboard</a>
+    </nav>
+
+    <!-- HEADER -->
+    <header class="page-header">
+        <div class="header-pre">// Aptitude Assessment · Round 01</div>
+        <div class="page-title">Quick Test</div>
+    </header>
+
+    <!-- META CARDS -->
+    <div class="meta-bar">
+        <div class="meta-card">
+            <span class="meta-label">Selected Role</span>
+            <span class="meta-value">{{ selected_role }}</span>
+        </div>
+        <div class="meta-card">
+            <span class="meta-label">Questions</span>
+            <span class="meta-value">5</span>
+        </div>
+        <div class="meta-card">
+            <span class="meta-label">Pass Mark</span>
+            <span class="meta-value">3 / 5</span>
+        </div>
+    </div>
+
+    <!-- FLASH MESSAGES -->
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          <div class="msg-box">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- QUESTIONS -->
+    <div class="container">
+
+        <div class="progress-wrap">
+            <div class="progress-label">
+                <span>Progress</span>
+                <span id="progressCount">0 / 5 answered</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+
+        <form method="POST" id="aptForm">
+            {% for q in questions %}
+                {% set question_index = loop.index0 %}
+                <div class="question-box">
+                    <span class="q-num">// Question {{ loop.index }} of 5</span>
+                    <div class="question-title">{{ q.question }}</div>
+                    {% for option in q.options %}
+                        <label class="option-label">
+                            <input type="radio" name="q{{ question_index }}" value="{{ option }}" required>
+                            {{ option }}
+                        </label>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+
+            <div class="submit-wrap">
+                <span class="submit-hint">// Answer all 5 to submit</span>
+                <button type="submit" class="submit-btn">Submit Test →</button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap"><div class="ticker-inner" id="ticker"></div></div>
+
+<script>
+/* ══ BG CANVAS ═══════════════════════════════════════ */
+const bgC=document.getElementById('bgCanvas'),bgX=bgC.getContext('2d');
+let W,H;
+function resize(){W=bgC.width=innerWidth;H=bgC.height=innerHeight}
+resize();window.addEventListener('resize',resize);
+const rgb=(c,a=1)=>`rgba(${c[0]},${c[1]},${c[2]},${a})`;
+const ORBS=[
+  {xf:0.1,yf:0.2,spd:0.00012,sz:0.6,c:[44,94,232]},
+  {xf:0.9,yf:0.7,spd:0.00009,sz:0.52,c:[108,63,207]},
+  {xf:0.5,yf:0.5,spd:0.00007,sz:0.46,c:[90,130,245]},
+  {xf:0.2,yf:0.8,spd:0.00011,sz:0.34,c:[26,63,191]},
+  {xf:0.8,yf:0.2,spd:0.00008,sz:0.38,c:[44,94,232]},
+];
+function drawBg(ts){
+  bgX.clearRect(0,0,W,H);bgX.fillStyle='#eef2ff';bgX.fillRect(0,0,W,H);
+  ORBS.forEach((o,i)=>{
+    const ox=(o.xf+.26*Math.sin(ts*o.spd+i*1.5))*W,oy=(o.yf+.20*Math.cos(ts*o.spd*.75+i*2.1))*H;
+    const r=Math.min(W,H)*o.sz;
+    const g=bgX.createRadialGradient(ox,oy,0,ox,oy,r);
+    g.addColorStop(0,rgb(o.c,.11));g.addColorStop(.45,rgb(o.c,.045));g.addColorStop(1,rgb(o.c,0));
+    bgX.fillStyle=g;bgX.beginPath();bgX.arc(ox,oy,r,0,Math.PI*2);bgX.fill();
+  });
+}
+function loop(ts){drawBg(ts);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+
+/* ══ CURSOR ═════════════════════════════════════════ */
+const cur=document.getElementById('cur'),curR=document.getElementById('cur-ring');
+let mx=-200,my=-200,rx=-200,ry=-200;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function cl(){cur.style.left=mx+'px';cur.style.top=my+'px';rx+=(mx-rx)*.11;ry+=(my-ry)*.11;curR.style.left=rx+'px';curR.style.top=ry+'px';requestAnimationFrame(cl)})();
+const TRAIL_N=18;
+const trails=Array.from({length:TRAIL_N},()=>{const d=document.createElement('div');d.className='trail';document.body.appendChild(d);return{el:d,x:0,y:0}});
+(function tl(){let x=mx,y=my;trails.forEach((t,i)=>{t.x+=(x-t.x)*.12;t.y+=(y-t.y)*.12;const s=(TRAIL_N-i)/TRAIL_N*.6;t.el.style.cssText=`left:${t.x}px;top:${t.y}px;width:5px;height:5px;background:rgba(44,94,232,${s*.5});box-shadow:0 0 ${s*8}px rgba(44,94,232,.4);transform:translate(-50%,-50%) scale(${s});opacity:${s*.65};border-radius:50%;filter:blur(1.5px);`;x=t.x;y=t.y});requestAnimationFrame(tl)})();
+document.querySelectorAll('a,button,.option-label').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{curR.style.width='48px';curR.style.height='48px';curR.style.opacity='.75'});
+  el.addEventListener('mouseleave',()=>{curR.style.width='36px';curR.style.height='36px';curR.style.opacity='.5'});
+});
+
+/* ══ PROGRESS TRACKER ════════════════════════════════ */
+const form=document.getElementById('aptForm');
+const fill=document.getElementById('progressFill');
+const count=document.getElementById('progressCount');
+const TOTAL=5;
+function updateProgress(){
+  const answered=new Set([...form.querySelectorAll('input[type=radio]:checked')].map(r=>r.name)).size;
+  fill.style.width=(answered/TOTAL*100)+'%';
+  count.textContent=answered+' / '+TOTAL+' answered';
+}
+form.addEventListener('change',updateProgress);
+
+/* ══ TICKER ══════════════════════════════════════════ */
+const TICKS=[
+  ['APTITUDE TEST','LIVE'],['QUESTIONS','5'],['PASS MARK','3/5'],
+  ['SYSTEM','READY'],['EVALUATION','ACTIVE'],['ROUND','01'],
+];
+const tk=document.getElementById('ticker');
+tk.innerHTML=[...TICKS,...TICKS].map(([k,v])=>
+  `<div class="tick-i">${k}&nbsp;<span>${v}</span></div><div class="tick-i" style="color:#b0bce8;font-size:0.4rem">◆</div>`
+).join('');
+</script>
+</body>
+</html>

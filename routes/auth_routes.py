@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, session, url_for, flash
 from models.user_model import create_user, get_user_by_email, verify_password
 from datetime import date
-from models.db import get_db_connection
+from models.progress_model import get_db_connection
 
 auth_bp = Blueprint("auth", __name__)
 

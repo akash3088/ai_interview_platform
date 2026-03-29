@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, session, redirect, url_for, current_app
 from services.gemini_service import evaluate_answer, generate_interview_feedback
-from models.db import get_db_connection
+from models.progress_model import get_db_connection
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from services.conversation_manager import ConversationManager
+from collections import Counter
 import random
 
 interview_bp = Blueprint('interview', __name__)
@@ -46,6 +47,101 @@ FALLBACK_QUESTIONS = {
     ]
 }
 
+
+def build_overall_emotion_summary(emotion_history):
+    if not emotion_history:
+        return {
+            "overall_dominant_emotion": "Unknown",
+            "overall_dominant_state": "Unknown",
+            "average_confidence": 0,
+            "overall_eye_contact": "Unknown",
+            "nervous_question_count": 0,
+            "total_samples": 0
+        }
+
+    emotions = [item.get("dominant_emotion", "Unknown") for item in emotion_history]
+    states = [item.get("dominant_state", "Unknown") for item in emotion_history]
+    eye_contacts = [item.get("eye_contact_summary", "Unknown") for item in emotion_history]
+    confidences = [int(item.get("avg_confidence", 0)) for item in emotion_history]
+    sample_counts = [int(item.get("samples_count", 0)) for item in emotion_history]
+
+    nervous_question_count = sum(
+        1 for item in emotion_history
+        if item.get("dominant_state") in ["Slightly Nervous", "Nervous"]
+    )
+
+    return {
+        "overall_dominant_emotion": Counter(emotions).most_common(1)[0][0],
+        "overall_dominant_state": Counter(states).most_common(1)[0][0],
+        "average_confidence": round(sum(confidences) / len(confidences)) if confidences else 0,
+        "overall_eye_contact": Counter(eye_contacts).most_common(1)[0][0],
+        "nervous_question_count": nervous_question_count,
+        "total_samples": sum(sample_counts)
+    }
+
+
+def get_aptitude_summary_from_session():
+    aptitude_score = session.get("aptitude_score", 0)
+    aptitude_total = session.get("aptitude_total", 5)
+
+    try:
+        aptitude_score = int(aptitude_score)
+    except:
+        aptitude_score = 0
+
+    try:
+        aptitude_total = int(aptitude_total)
+    except:
+        aptitude_total = 5
+
+    if aptitude_total <= 0:
+        aptitude_total = 5
+
+    return aptitude_score, aptitude_total
+
+
+def calculate_readiness_score(average_score, aptitude_score, aptitude_total, average_confidence):
+    interview_component = (average_score / 10) * 60
+    aptitude_component = (aptitude_score / aptitude_total) * 25 if aptitude_total else 0
+    confidence_component = (average_confidence / 100) * 15
+
+    readiness_score = round(interview_component + aptitude_component + confidence_component)
+
+    if readiness_score < 0:
+        readiness_score = 0
+    if readiness_score > 100:
+        readiness_score = 100
+
+    return readiness_score
+
+
+def get_hiring_decision(readiness_score):
+    if readiness_score >= 80:
+        return {
+            "hire_probability": readiness_score,
+            "decision_label": "Recommended",
+            "decision_note": "Strong overall readiness for interview performance."
+        }
+    elif readiness_score >= 65:
+        return {
+            "hire_probability": readiness_score,
+            "decision_label": "Consider with Improvement",
+            "decision_note": "Promising candidate, but a few areas need improvement."
+        }
+    elif readiness_score >= 50:
+        return {
+            "hire_probability": readiness_score,
+            "decision_label": "Borderline",
+            "decision_note": "Basic potential is visible, but more preparation is required."
+        }
+    else:
+        return {
+            "hire_probability": readiness_score,
+            "decision_label": "Not Recommended Yet",
+            "decision_note": "Candidate needs more preparation before a strong recommendation."
+        }
+
+
 @interview_bp.route("/interview", methods=["GET", "POST"])
 def interview():
 
@@ -54,9 +150,12 @@ def interview():
 
     if "role" not in session:
         return "Please select a role from dashboard first."
+    
+    if session.get("selection_mode") == "resume" and not session.get("aptitude_cleared", False):
+        return redirect(url_for("aptitude.aptitude_test"))
 
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True, buffered=True)
+    cursor = conn.cursor(dictionary=True)
 
     # FIRST TIME START
     if request.method == "GET":
@@ -84,6 +183,7 @@ def interview():
         session["question_count"] = 1
         session["total_score"] = 0
         session["used_fallback_questions"] = []
+        session["emotion_history"] = []
 
         # Initialize conversation manager
         manager = ConversationManager(role=session["role"], level=1)
@@ -100,6 +200,41 @@ def interview():
     answer = request.form["answer"]
     question = request.form["question"]
     role = session["role"]
+
+    # Emotion data from frontend
+    dominant_emotion = request.form.get("dominant_emotion", "Unknown").strip()
+    dominant_state = request.form.get("dominant_state", "Unknown").strip()
+    avg_confidence = request.form.get("avg_confidence", "0").strip()
+    eye_contact_summary = request.form.get("eye_contact_summary", "Unknown").strip()
+    emotion_samples_count = request.form.get("emotion_samples_count", "0").strip()
+
+    try:
+        avg_confidence = int(avg_confidence)
+    except ValueError:
+        avg_confidence = 0
+
+    try:
+        emotion_samples_count = int(emotion_samples_count)
+    except ValueError:
+        emotion_samples_count = 0
+
+    # Save emotion entry for this answer
+    emotion_entry = {
+        "question": question,
+        "dominant_emotion": dominant_emotion,
+        "dominant_state": dominant_state,
+        "avg_confidence": avg_confidence,
+        "eye_contact_summary": eye_contact_summary,
+        "samples_count": emotion_samples_count
+    }
+
+    if "emotion_history" not in session:
+        session["emotion_history"] = []
+
+    emotion_history = session["emotion_history"]
+    emotion_history.append(emotion_entry)
+    session["emotion_history"] = emotion_history
+    session.modified = True
 
     # Recreate conversation manager from session
     manager_data = session.get("manager")
@@ -176,8 +311,20 @@ def interview():
     if session["question_count"] > MAX_QUESTIONS:
 
         average_score = session["total_score"] / MAX_QUESTIONS
-
         final_context = manager.get_context()
+
+        emotion_history = session.get("emotion_history", [])
+        overall_emotion_summary = build_overall_emotion_summary(emotion_history)
+        aptitude_score, aptitude_total = get_aptitude_summary_from_session()
+
+        readiness_score = calculate_readiness_score(
+            average_score=average_score,
+            aptitude_score=aptitude_score,
+            aptitude_total=aptitude_total,
+            average_confidence=overall_emotion_summary.get("average_confidence", 0)
+        )
+
+        hiring_decision = get_hiring_decision(readiness_score)
 
         try:
             with ThreadPoolExecutor() as executor:
@@ -186,7 +333,8 @@ def interview():
                     role,
                     level,
                     final_context,
-                    api_key
+                    api_key,
+                    overall_emotion_summary
                 )
                 feedback_response = future.result(timeout=20)
         except TimeoutError:
@@ -195,6 +343,10 @@ def interview():
         strengths = "Good effort shown during the interview."
         weaknesses = "Some answers need more clarity and depth."
         overall_feedback = "Keep practicing to improve confidence, structure, and technical precision."
+        improvement_plan = "Revise core concepts, practice more mock interviews, and improve answer structure."
+        emotion_correlation = "No strong emotion-performance pattern was detected."
+        next_round_focus = "Continue with a balanced practice round covering weak concepts."
+        readiness_summary = "The candidate shows developing interview readiness with scope for further improvement."
 
         if feedback_response:
             for line in feedback_response.split("\n"):
@@ -208,6 +360,18 @@ def interview():
 
                 elif line.lower().startswith("overall feedback:"):
                     overall_feedback = line.split(":", 1)[1].strip()
+
+                elif line.lower().startswith("improvement plan:"):
+                    improvement_plan = line.split(":", 1)[1].strip()
+
+                elif line.lower().startswith("emotion correlation:"):
+                    emotion_correlation = line.split(":", 1)[1].strip()
+
+                elif line.lower().startswith("next round focus:"):
+                    next_round_focus = line.split(":", 1)[1].strip()
+
+                elif line.lower().startswith("readiness summary:"):
+                    readiness_summary = line.split(":", 1)[1].strip()
 
         cursor.execute(
             "INSERT INTO interviews (user_id, role, total_score) VALUES (%s, %s, %s)",
@@ -245,7 +409,7 @@ def interview():
             WHERE user_id=%s AND role_name=%s
         """, (level, session["user_id"], role))
 
-        # ---------------- CREDIT REWARD SYSTEM ----------------
+        # CREDIT REWARD SYSTEM
         reward_credits = 2
         bonus_credit = 0
 
@@ -257,7 +421,6 @@ def interview():
             "UPDATE users SET credits = credits + %s WHERE id=%s",
             (reward_credits, session["user_id"])
         )
-        # ------------------------------------------------------
 
         conn.commit()
 
@@ -265,6 +428,9 @@ def interview():
         session.pop("total_score", None)
         session.pop("used_fallback_questions", None)
         session.pop("manager", None)
+        session.pop("emotion_history", None)
+        session.pop("aptitude_score", None)
+        session.pop("aptitude_total", None)
 
         cursor.close()
         conn.close()
@@ -276,7 +442,19 @@ def interview():
             bonus_credit=bonus_credit,
             strengths=strengths,
             weaknesses=weaknesses,
-            overall_feedback=overall_feedback
+            overall_feedback=overall_feedback,
+            improvement_plan=improvement_plan,
+            emotion_correlation=emotion_correlation,
+            next_round_focus=next_round_focus,
+            readiness_summary=readiness_summary,
+            readiness_score=readiness_score,
+            hire_probability=hiring_decision["hire_probability"],
+            decision_label=hiring_decision["decision_label"],
+            decision_note=hiring_decision["decision_note"],
+            aptitude_score=aptitude_score,
+            aptitude_total=aptitude_total,
+            role=role,
+            emotion_summary=overall_emotion_summary
         )
 
     next_question = None
@@ -298,7 +476,6 @@ def interview():
     if not next_question:
 
         role_questions = FALLBACK_QUESTIONS.get(role, [])
-
         used_questions = session.get("used_fallback_questions", [])
 
         remaining_questions = [q for q in role_questions if q not in used_questions]

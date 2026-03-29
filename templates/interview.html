@@ -7,7 +7,7 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script type="module" src="https://unpkg.com/@splinetool/viewer/build/spline-viewer.js"></script>
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.12.69/build/spline-viewer.js"></script>
 
     <script type="importmap">
     {
@@ -64,9 +64,9 @@
             position: fixed;
             top: 145px;
             right: 30px;
-            width: 180px;
-            min-height: 58px;
-            padding: 10px 12px;
+            width: 220px;
+            min-height: 118px;
+            padding: 12px 14px;
             border-radius: 14px;
             border: 1px solid rgba(0, 240, 255, 0.25);
             background: rgba(5, 10, 18, 0.82);
@@ -76,18 +76,44 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 4px;
-        }
+            gap: 6px;
+}
 
         #emotionLabel {
             font-size: 0.7rem;
             letter-spacing: 1.5px;
             color: rgba(255,255,255,0.65);
             text-transform: uppercase;
+            margin-bottom: 4px;
         }
 
-        #emotionText {
-            font-size: 0.92rem;
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 2px 0;
+        }
+
+        .status-key {
+            font-size: 0.74rem;
+            color: rgba(255,255,255,0.68);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .status-value {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #fff;
+            text-align: right;
+        }
+
+        #emotionText,
+        #nervousText,
+        #confidenceText,
+        #eyeContactText {
+            font-size: 0.88rem;
             font-weight: 600;
             color: #fff;
         }
@@ -319,10 +345,10 @@
             }
 
             #emotionBox {
-                width: 130px;
+                width: 180px;
                 top: 104px;
                 right: 16px;
-                min-height: 52px;
+                min-height: 110px;
                 padding: 8px 10px;
             }
 
@@ -358,6 +384,8 @@
                 left: 16px;
             }
         }
+
+        
     </style>
 </head>
 <body>
@@ -367,8 +395,27 @@
     <video id="selfView" autoplay playsinline muted></video>
 
     <div id="emotionBox">
-        <span id="emotionLabel">Emotion Status</span>
-        <span id="emotionText">Loading detector...</span>
+        <span id="emotionLabel">Live Interview Analysis</span>
+
+        <div class="status-row">
+            <span class="status-key">Emotion</span>
+            <span class="status-value" id="emotionText">Loading...</span>
+        </div>
+
+        <div class="status-row">
+            <span class="status-key">State</span>
+            <span class="status-value" id="nervousText">Analyzing...</span>
+        </div>
+
+        <div class="status-row">
+            <span class="status-key">Confidence</span>
+            <span class="status-value" id="confidenceText">0%</span>
+        </div>
+
+        <div class="status-row">
+            <span class="status-key">Eye Contact</span>
+            <span class="status-value" id="eyeContactText">Checking...</span>
+        </div>
     </div>
 
     <spline-viewer id="splineViewer" url="https://prod.spline.design/N94mv8IXbKFow6Xi/scene.splinecode"></spline-viewer>
@@ -380,6 +427,13 @@
 
         <form method="POST" id="answerForm">
             <input type="hidden" name="question" value="{{ question }}">
+
+            <input type="hidden" name="dominant_emotion" id="dominantEmotionInput">
+            <input type="hidden" name="dominant_state" id="dominantStateInput">
+            <input type="hidden" name="avg_confidence" id="avgConfidenceInput">
+            <input type="hidden" name="eye_contact_summary" id="eyeContactInput">
+            <input type="hidden" name="emotion_samples_count" id="emotionSamplesCountInput">
+
             <div class="input-container">
                 <textarea name="answer" id="answer" placeholder="Respond to the interface..." rows="3"></textarea>
             </div>
@@ -418,6 +472,9 @@
         let answerBox = document.getElementById("answer");
         let submitBtn = document.getElementById("submitBtn");
         let emotionText = document.getElementById("emotionText");
+        let nervousText = document.getElementById("nervousText");
+        let confidenceText = document.getElementById("confidenceText");
+        let eyeContactText = document.getElementById("eyeContactText");
 
         let mediaStream = null;
         let cameraOn = true;
@@ -429,6 +486,14 @@
         let emotionInterval = null;
         let emotionModelReady = false;
 
+        // Per-answer live emotion tracking
+        let emotionSnapshots = [];
+        let currentLiveAnalysis = {
+            emotion: "Neutral",
+            state: "Normal",
+            confidence: 70,
+            eyeContact: "Good"
+        };
         function showWarning(message) {
             warningBox.innerText = message;
             warningBox.style.display = "block";
@@ -438,9 +503,97 @@
             warningBox.style.display = "none";
         }
 
-        function updateEmotionUI(label) {
-            emotionText.innerText = `${label} `;
+        function updateEmotionUI(data) {
+            emotionText.innerText = data.emotion || "Unknown";
+            nervousText.innerText = data.state || "Unknown";
+            confidenceText.innerText = `${data.confidence ?? 0}%`;
+            eyeContactText.innerText = data.eyeContact || "Unknown";
         }
+
+        function pushEmotionSnapshot(data) {
+            if (!data) return;
+
+            currentLiveAnalysis = {
+                emotion: data.emotion || "Unknown",
+                state: data.state || "Unknown",
+                confidence: Number(data.confidence ?? 0),
+                eyeContact: data.eyeContact || "Unknown"
+            };
+
+            emotionSnapshots.push({
+                emotion: currentLiveAnalysis.emotion,
+                state: currentLiveAnalysis.state,
+                confidence: currentLiveAnalysis.confidence,
+                eyeContact: currentLiveAnalysis.eyeContact,
+                ts: Date.now()
+            });
+
+            // Prevent unlimited growth
+            if (emotionSnapshots.length > 120) {
+                emotionSnapshots.shift();
+            }
+        }
+
+        function getMostFrequentValue(arr, key, fallback = "Unknown") {
+            if (!arr.length) return fallback;
+
+            const counts = {};
+            for (const item of arr) {
+                const value = item[key] || fallback;
+                counts[value] = (counts[value] || 0) + 1;
+            }
+
+            let bestValue = fallback;
+            let bestCount = 0;
+
+            for (const [value, count] of Object.entries(counts)) {
+                if (count > bestCount) {
+                    bestValue = value;
+                    bestCount = count;
+                }
+            }
+
+            return bestValue;
+        }
+
+        function summarizeEmotionSnapshots() {
+            if (!emotionSnapshots.length) {
+                return {
+                    dominantEmotion: currentLiveAnalysis.emotion || "Unknown",
+                    dominantState: currentLiveAnalysis.state || "Unknown",
+                    avgConfidence: Number(currentLiveAnalysis.confidence ?? 0),
+                    eyeContactSummary: currentLiveAnalysis.eyeContact || "Unknown",
+                    samplesCount: 0
+                };
+            }
+
+            const avgConfidence = Math.round(
+                emotionSnapshots.reduce((sum, item) => sum + Number(item.confidence || 0), 0) / emotionSnapshots.length
+            );
+
+            return {
+                dominantEmotion: getMostFrequentValue(emotionSnapshots, "emotion", "Unknown"),
+                dominantState: getMostFrequentValue(emotionSnapshots, "state", "Unknown"),
+                avgConfidence,
+                eyeContactSummary: getMostFrequentValue(emotionSnapshots, "eyeContact", "Unknown"),
+                samplesCount: emotionSnapshots.length
+            };
+        }
+
+        function fillEmotionInputsBeforeSubmit() {
+            const summary = summarizeEmotionSnapshots();
+
+            document.getElementById("dominantEmotionInput").value = summary.dominantEmotion;
+            document.getElementById("dominantStateInput").value = summary.dominantState;
+            document.getElementById("avgConfidenceInput").value = summary.avgConfidence;
+            document.getElementById("eyeContactInput").value = summary.eyeContactSummary;
+            document.getElementById("emotionSamplesCountInput").value = summary.samplesCount;
+        }
+
+        function resetEmotionTrackingForNextAnswer() {
+            emotionSnapshots = [];
+        }
+
 
         function speakText(text) {
             if (!text || !text.trim()) return;
@@ -475,7 +628,12 @@
                 });
 
                 emotionModelReady = true;
-                updateEmotionUI("Neutral", 0);
+                updateEmotionUI({
+                    emotion: "Neutral",
+                    state: "Normal",
+                    confidence: 70,
+                    eyeContact: "Good"
+                });
                 startEmotionDetection();
             } catch (error) {
                 console.error("Emotion model load failed:", error);
@@ -543,7 +701,12 @@
 
         function classifyEmotion(blendshapes) {
             if (!blendshapes || !blendshapes.length) {
-                return { label: "No face detected", score: 0 };
+                return {
+                    emotion: "No face",
+                    state: "Unavailable",
+                    confidence: 0,
+                    eyeContact: "Low"
+                };
             }
 
             const map = {};
@@ -553,18 +716,82 @@
 
             const smile = ((map.mouthSmileLeft || 0) + (map.mouthSmileRight || 0)) / 2;
             const frown = ((map.mouthFrownLeft || 0) + (map.mouthFrownRight || 0)) / 2;
-            const browSad = (map.browInnerUp || 0) + ((map.browDownLeft || 0) + (map.browDownRight || 0)) / 2;
+            const browDown = ((map.browDownLeft || 0) + (map.browDownRight || 0)) / 2;
+            const browInnerUp = map.browInnerUp || 0;
             const mouthPress = ((map.lipPressLeft || 0) + (map.lipPressRight || 0)) / 2;
+            const jawOpen = map.jawOpen || 0;
+            const mouthPucker = map.mouthPucker || 0;
+            const eyeWide = ((map.eyeWideLeft || 0) + (map.eyeWideRight || 0)) / 2;
+            const blink = ((map.eyeBlinkLeft || 0) + (map.eyeBlinkRight || 0)) / 2;
+            const squint = ((map.eyeSquintLeft || 0) + (map.eyeSquintRight || 0)) / 2;
 
-            if (smile > 0.38 && smile > frown + 0.12) {
-                return { label: "Happy", score: 1 };
+            let emotion = "Neutral";
+
+            if (smile > 0.38 && smile > frown + 0.10) {
+                emotion = "Happy";
+            } else if ((frown > 0.24 || browDown > 0.24 || mouthPress > 0.34) && smile < 0.25) {
+                emotion = "Tense";
+            } else if (jawOpen > 0.22 && browInnerUp > 0.22 && eyeWide > 0.18) {
+                emotion = "Anxious";
+            } else if (squint > 0.18 && mouthPress < 0.22 && frown < 0.18) {
+                emotion = "Focused";
             }
 
-            if ((frown > 0.22 || browSad > 0.5 || mouthPress > 0.35) && smile < 0.25) {
-                return { label: "Sad", score: -1 };
+            const nervousScore =
+                (frown * 0.20) +
+                (browDown * 0.18) +
+                (browInnerUp * 0.15) +
+                (mouthPress * 0.20) +
+                (jawOpen * 0.10) +
+                (mouthPucker * 0.07) +
+                (eyeWide * 0.10);
+
+            let state = "Calm";
+
+            if (emotion === "Anxious") {
+                state = "Nervous";
+            } else if (emotion === "Tense") {
+                state = "Slightly Nervous";
+            } else if (nervousScore >= 0.42) {
+                state = "Nervous";
+            } else if (nervousScore >= 0.28) {
+                state = "Slightly Nervous";
+            } else if (
+                nervousScore <= 0.16 &&
+                smile < 0.25 &&
+                blink < 0.45 &&
+                emotion === "Neutral"
+            ) {
+                state = "Normal";
             }
 
-            return { label: "Neutral", scores: 0 };
+            const confidenceRaw =
+                0.55
+                + (smile * 0.18)
+                + ((state === "Calm") ? 0.10 : 0)
+                + ((state === "Normal") ? 0.04 : 0)
+                + ((emotion === "Focused") ? 0.08 : 0)
+                - (frown * 0.12)
+                - (mouthPress * 0.12)
+                - (eyeWide * 0.08)
+                - (jawOpen * 0.06)
+                - (blink * 0.08);
+
+            let confidence = Math.round(Math.max(0, Math.min(1, confidenceRaw)) * 100);
+
+            let eyeContact = "Good";
+            if (blink > 0.58 || squint > 0.42) {
+                eyeContact = "Low";
+            } else if (blink > 0.35 || squint > 0.25) {
+                eyeContact = "Moderate";
+            }
+
+            return {
+                emotion,
+                state,
+                confidence,
+                eyeContact
+            };
         }
 
         function startEmotionDetection() {
@@ -572,7 +799,14 @@
 
             emotionInterval = setInterval(() => {
                 if (!cameraOn) {
-                    updateEmotionUI("Camera Off", 0);
+                    const cameraOffData = {
+                        emotion: "Camera Off",
+                        state: "Unavailable",
+                        confidence: 0,
+                        eyeContact: "Unavailablse"
+                    };
+                    updateEmotionUI(cameraOffData);
+                    pushEmotionSnapshot(cameraOffData);
                     return;
                 }
 
@@ -580,13 +814,16 @@
 
                 try {
                     const result = faceLandmarker.detectForVideo(videoElement, performance.now());
-                    const emotion = classifyEmotion(result.faceBlendshapes || []);
-                    updateEmotionUI(emotion.label, emotion.score);
+                    const analysis = classifyEmotion(result.faceBlendshapes || []);
+                    updateEmotionUI(analysis);
+                    pushEmotionSnapshot(analysis);
                 } catch (error) {
                     console.error("Emotion detection error:", error);
                 }
             }, 1500);
         }
+
+        
 
         function stopEmotionDetection() {
             if (emotionInterval) {
@@ -647,7 +884,14 @@
             camIcon.classList.toggle("fa-video-slash");
 
             if (!cameraOn) {
-                updateEmotionUI("Camera Off", 0);
+                const cameraOffData = {
+                    emotion: "Camera Off",
+                    state: "Unavailable",
+                    confidence: 0,
+                    eyeContact: "Unavailable"
+                };
+                updateEmotionUI(cameraOffData);
+                pushEmotionSnapshot(cameraOffData);
                 showWarning("Camera turned off!");
             } else if (!tabWarningActive) {
                 clearWarning();
@@ -710,6 +954,8 @@
         });
 
         document.addEventListener("DOMContentLoaded", function () {
+            resetEmotionTrackingForNextAnswer();
+
             const questionElement = document.getElementById("currentQuestion");
 
             if (questionElement && questionElement.innerText.trim() !== "") {
@@ -720,6 +966,8 @@
         });
 
         document.getElementById("answerForm").addEventListener("submit", function () {
+            fillEmotionInputsBeforeSubmit();
+
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> PROCESSING';
             submitBtn.style.opacity = "0.8";
         });

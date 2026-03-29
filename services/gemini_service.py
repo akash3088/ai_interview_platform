@@ -1,9 +1,9 @@
-import os
-import google.genai as genai
+from google import genai
 
 
 # Create Gemini client safely
 def get_gemini_client(api_key):
+    print("Client using key:", api_key[:10] if api_key else "No key")
     return genai.Client(api_key=api_key)
 
 
@@ -120,6 +120,9 @@ Next Question: <next question>
 Candidate Level: {level}
 Difficulty Rule: {difficulty_instruction}
 
+Previous Interview Conversation:
+{context}
+
 Current Question:
 {question}
 
@@ -139,23 +142,19 @@ Feedback: <detailed feedback>
 Next Question: <next question>
 """
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config={
-                "max_output_tokens": 1000,
-                "temperature": 0.6,
-            }
-        )
-        return response.text
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config={
+            "max_output_tokens": 1000,
+            "temperature": 0.6,
+        }
+    )
 
-    except Exception as e:
-        return f"GEMINI ERROR: {str(e)}"
+    return response.text
 
 
-
-def generate_interview_feedback(role, level, context, api_key):
+def generate_interview_feedback(role, level, context, api_key, emotion_summary=None):
     client = get_gemini_client(api_key)
 
     role_instruction = ROLE_PROMPTS.get(
@@ -164,6 +163,23 @@ def generate_interview_feedback(role, level, context, api_key):
     )
 
     difficulty_instruction = get_difficulty_instruction(level)
+
+    emotion_summary_text = ""
+    if emotion_summary:
+        emotion_summary_text = f"""
+Supportive non-verbal interview behavior summary:
+- Overall dominant emotion: {emotion_summary.get('overall_dominant_emotion', 'Unknown')}
+- Overall dominant state: {emotion_summary.get('overall_dominant_state', 'Unknown')}
+- Average confidence: {emotion_summary.get('average_confidence', 0)}%
+- Overall eye contact: {emotion_summary.get('overall_eye_contact', 'Unknown')}
+- Nervous question count: {emotion_summary.get('nervous_question_count', 0)}
+- Total emotion samples captured: {emotion_summary.get('total_samples', 0)}
+
+IMPORTANT BEHAVIOR RULES:
+- Use this only as supportive interview behavior analysis.
+- Do NOT treat this as medical, psychological, or clinical diagnosis.
+- Do NOT overstate nervousness or confidence.
+"""
 
     prompt = f"""
 {role_instruction}
@@ -174,23 +190,51 @@ Difficulty Rule: {difficulty_instruction}
 Full Interview Conversation:
 {context}
 
+{emotion_summary_text}
+
 Your task:
 Analyze the candidate's complete interview performance based on all questions and answers.
 
+Instructions:
+- Main evaluation must still be based on answer quality, clarity, relevance, technical correctness, and communication quality.
+- You MUST use the behavior summary in the final response.
+- Strengths must mention specific good areas from the actual interview, not generic praise.
+- Weaknesses must mention specific weak areas from the actual interview, not generic criticism.
+- Improvement Plan must be truly personalized and should mention exact things the candidate should improve next.
+- Do NOT write generic advice like "practice more mock interviews", "revise core concepts", or "improve answer structure" unless you also mention the exact topic or weak area.
+- Emotion Correlation must connect behavior with interview performance in a meaningful way.
+- Do NOT write generic lines like "No strong emotion-performance pattern was detected" unless the data is completely flat and no useful observation can be made.
+- If confidence was moderate or low, mention how that may have affected delivery.
+- If the candidate remained focused or calm, mention whether that supported answer quality.
+- Next Round Focus must mention 2 to 4 specific topics or interview skills to practice next.
+- Do NOT write generic phrases like "cover weak concepts" or "balanced practice round".
+- If the self-introduction was weak, mention self-introduction or answer framing explicitly.
+- If the candidate was good in one area but weak in another, use that contrast in the guidance.
+- Keep the tone professional, realistic, constructive, and not harsh.
+
 IMPORTANT:
-Follow this format STRICTLY. Do NOT skip colon.
+Follow this format STRICTLY.
+Each field must be exactly one line.
+Do NOT skip any field.
+Do NOT merge fields.
 
-Strengths: one line only
-Weaknesses: one line only
-Overall Feedback: one line only
-
-Keep the feedback professional, constructive, and short-to-medium length.
+Strengths: one line only, must include at least one direct observation from the interview behavior summary if available
+Weaknesses: one line only, must include at least one direct observation from the interview behavior summary if available
+Overall Feedback: one line only, must include at least one direct observation from the interview behavior summary if available
+Improvement Plan: one line only, must include at least one direct observation from the interview behavior summary if available
+Emotion Correlation: one line only, must include at least one direct observation from the interview behavior summary if available
+Next Round Focus: one line only, must include at least one direct observation from the interview behavior summary if available
+Readiness Summary: one line only, must include at least one direct observation from the interview behavior summary if available
 
 FORMAT:
 
-Strengths: <candidate strengths>
-Weaknesses: <candidate weaknesses>
-Overall Feedback: <overall final feedback>
+Strengths: <specific strengths from the interview>
+Weaknesses: <specific weaknesses from the interview>
+Overall Feedback: <clear final evaluation>
+Improvement Plan: <personalized plan with exact weak areas/topics to improve>
+Emotion Correlation: <specific relation between confidence/focus/nervousness/eye contact and answer quality>
+Next Round Focus: <2 to 4 specific topics or interview skills to practice next>
+Readiness Summary: <short readiness interpretation based on interview and behavior>
 """
 
     try:
@@ -198,13 +242,11 @@ Overall Feedback: <overall final feedback>
             model="gemini-2.5-flash",
             contents=prompt,
             config={
-                "max_output_tokens": 1000,
-                "temperature": 0.6,
+                "max_output_tokens": 1200,
+                "temperature": 0.5,
             }
         )
         return response.text
-
     except Exception as e:
-        return f"GEMINI ERROR: {str(e)}"
-
-    return response.text
+        print("Gemini generate_interview_feedback failed:", e)
+        return ""
